@@ -276,10 +276,10 @@ describe('createNavigator', () => {
 
   it('within a thread group, navigating keeps scroll anchored at the group top', () => {
     const entries = buildEntries(['a', 'b', 'c']);
-    // a, b, c are flush (gap = 5px ≤ THREAD_GAP_PX)
+    // a, b, c are flush (gap = 2px ≤ THREAD_GAP_PX=4)
     mockRect(entries[0].article, 500, 100); // bottom = 600
-    mockRect(entries[1].article, 605, 100); // gap 5
-    mockRect(entries[2].article, 710, 100); // gap 5
+    mockRect(entries[1].article, 602, 100); // gap 2
+    mockRect(entries[2].article, 704, 100); // gap 2
 
     const scrollBy = vi.fn();
     window.scrollBy = scrollBy as unknown as typeof window.scrollBy;
@@ -298,13 +298,38 @@ describe('createNavigator', () => {
     nav.stop();
   });
 
+  it('group walk is capped so a runaway of flush posts cannot pin far away', () => {
+    // 8 posts all with tiny gaps. Without the cap, findGroupTop would walk
+    // back 7 steps to entries[0]. Cap is 3, so the pin target is at most 3 back.
+    const entries = buildEntries(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']);
+    for (let i = 0; i < 8; i++) {
+      mockRect(entries[i].article, 500 + i * 102, 100);
+    }
+    const scrollBy = vi.fn();
+    window.scrollBy = scrollBy as unknown as typeof window.scrollBy;
+
+    const nav = createNavigator({
+      registry: makeRegistry(entries),
+      router: makeRouter(),
+      openLink: vi.fn(),
+      goBack: vi.fn(),
+    });
+    // Move to entries[7] step by step; final pin should target entries[4]
+    // (7 - 3 walk cap = 4), not entries[0].
+    for (let i = 0; i < 7; i++) nav.dispatch('next');
+    const lastCall = scrollBy.mock.calls[scrollBy.mock.calls.length - 1][0];
+    const expectedTop = 500 + 4 * 102 - 8; // entries[4].top - SCROLL_PAD
+    expect(lastCall.top).toBe(expectedTop);
+    nav.stop();
+  });
+
   it('crossing out of a thread group re-pins to the new group top', () => {
     const entries = buildEntries(['a', 'b', 'c', 'd']);
     // a, b, c form one group; d is its own (large gap before)
     mockRect(entries[0].article, 500, 100);  // bottom 600
-    mockRect(entries[1].article, 605, 100);  // gap 5 → grouped
-    mockRect(entries[2].article, 710, 100);  // gap 5 → grouped, bottom 810
-    mockRect(entries[3].article, 920, 100);  // gap 110 → separate
+    mockRect(entries[1].article, 602, 100);  // gap 2 → grouped
+    mockRect(entries[2].article, 704, 100);  // gap 2 → grouped, bottom 804
+    mockRect(entries[3].article, 920, 100);  // gap 116 → separate
 
     const scrollBy = vi.fn();
     window.scrollBy = scrollBy as unknown as typeof window.scrollBy;

@@ -13,15 +13,18 @@ export type Command =
   | 'pageUp';
 
 const ACTIVE_ATTR = 'data-xkbd-active';
-const THREAD_GAP_PX = 16;
+const THREAD_GAP_PX = 4;
+const THREAD_MAX_WALK = 3;
 
 function findGroupTop(entries: TweetEntry[], idx: number): TweetEntry {
   let i = idx;
-  while (i > 0) {
+  let walked = 0;
+  while (i > 0 && walked < THREAD_MAX_WALK) {
     const prev = entries[i - 1].article.getBoundingClientRect();
     const cur = entries[i].article.getBoundingClientRect();
     if (cur.top - prev.bottom > THREAD_GAP_PX) break;
     i--;
+    walked++;
   }
   return entries[i];
 }

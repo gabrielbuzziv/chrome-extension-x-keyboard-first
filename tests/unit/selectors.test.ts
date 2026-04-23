@@ -31,3 +31,40 @@ describe('selectors', () => {
     expect(queryAll(SELECTORS.TWEET)).toHaveLength(2);
   });
 });
+
+describe('new openable/media selectors', () => {
+  it('SELECTORS exports QUOTED_TWEET, CARD, IMAGE, VIDEO, BODY_URL arrays', () => {
+    expect(Array.isArray(SELECTORS.QUOTED_TWEET)).toBe(true);
+    expect(Array.isArray(SELECTORS.CARD)).toBe(true);
+    expect(Array.isArray(SELECTORS.IMAGE)).toBe(true);
+    expect(Array.isArray(SELECTORS.VIDEO)).toBe(true);
+    expect(Array.isArray(SELECTORS.BODY_URL)).toBe(true);
+  });
+
+  it('IMAGE matches a tweetPhoto img', () => {
+    document.body.innerHTML = `
+      <article>
+        <div data-testid="tweetPhoto"><img src="https://x/img?name=small"></div>
+      </article>`;
+    const el = queryFirst(SELECTORS.IMAGE, document.body);
+    expect(el?.tagName).toBe('IMG');
+  });
+
+  it('VIDEO matches videoPlayer', () => {
+    document.body.innerHTML = `
+      <article><div data-testid="videoPlayer"><video></video></div></article>`;
+    const el = queryFirst(SELECTORS.VIDEO, document.body);
+    expect(el).not.toBeNull();
+  });
+
+  it('BODY_URL matches t.co link inside tweetText', () => {
+    document.body.innerHTML = `
+      <article>
+        <div data-testid="tweetText">
+          hi <a role="link" href="https://t.co/abc">link</a>
+        </div>
+      </article>`;
+    const el = queryFirst(SELECTORS.BODY_URL, document.body);
+    expect((el as HTMLAnchorElement)?.href).toContain('t.co');
+  });
+});

@@ -28,6 +28,28 @@ export const SELECTORS = {
     '[data-testid="pillLabel"]',
     'button[aria-label*="post" i]',
   ],
+  QUOTED_TWEET: [
+    'div[aria-labelledby] article[data-testid="tweet"]',
+    'article[data-testid="tweet"] article[data-testid="tweet"]',
+    'article[data-testid="tweet"] [role="link"][tabindex="0"]:has(time)',
+  ],
+  CARD: [
+    '[data-testid="card.wrapper"]',
+    '[data-testid^="card.layout"]',
+  ],
+  IMAGE: [
+    '[data-testid="tweetPhoto"] img',
+    'a[href*="/photo/"] img',
+  ],
+  VIDEO: [
+    '[data-testid="videoPlayer"] video',
+    '[data-testid="videoComponent"] video',
+    'video',
+  ],
+  BODY_URL: [
+    '[data-testid="tweetText"] a[role="link"][href^="https://t.co/"]',
+    '[data-testid="tweetText"] a[href^="http"]',
+  ],
 } as const;
 
 export function queryFirst(

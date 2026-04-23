@@ -177,4 +177,26 @@ describe('createMediaModal', () => {
     modal.close();
     expect(document.body.style.overflow).toBe('auto');
   });
+
+  it('clicking the next nav button advances the carousel without closing the modal', () => {
+    modal = createMediaModal();
+    modal.open(itemsFor(3), 0);
+    const host = document.querySelector('[data-xkbd-media]') as HTMLElement;
+    const next = host.shadowRoot!.querySelector('.nav.next') as HTMLButtonElement;
+    next.click();
+    expect(modal.isOpen()).toBe(true);
+    const img = host.shadowRoot!.querySelector('img') as HTMLImageElement;
+    expect(img.src).toContain('I1');
+  });
+
+  it('clicking a thumbnail jumps without closing', () => {
+    modal = createMediaModal();
+    modal.open(itemsFor(3), 0);
+    const host = document.querySelector('[data-xkbd-media]') as HTMLElement;
+    const thumbs = host.shadowRoot!.querySelectorAll('.thumb') as NodeListOf<HTMLButtonElement>;
+    thumbs[2].click();
+    expect(modal.isOpen()).toBe(true);
+    const img = host.shadowRoot!.querySelector('img') as HTMLImageElement;
+    expect(img.src).toContain('I2');
+  });
 });

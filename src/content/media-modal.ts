@@ -65,9 +65,7 @@ export function createMediaModal(): MediaModal {
     `;
     const backdrop = shadow.querySelector('.backdrop') as HTMLElement;
     backdrop.addEventListener('click', (e) => {
-      const path = e.composedPath();
-      const stage = shadow!.querySelector('.stage');
-      if (stage && !path.includes(stage)) doClose();
+      if (e.target === backdrop) doClose();
     });
     document.body.appendChild(host);
     prevBodyOverflow = document.body.style.overflow;

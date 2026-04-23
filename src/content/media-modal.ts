@@ -10,6 +10,13 @@ export interface MediaModal {
   stop(): void;
 }
 
+function upgradeImageSrc(src: string): string {
+  if (/[?&]name=/.test(src)) {
+    return src.replace(/([?&])name=\w+/, '$1name=large');
+  }
+  return src + (src.includes('?') ? '&' : '?') + 'name=large';
+}
+
 export function createMediaModal(): MediaModal {
   let host: HTMLDivElement | null = null;
   let shadow: ShadowRoot | null = null;
@@ -49,7 +56,23 @@ export function createMediaModal(): MediaModal {
   };
 
   const render = () => {
-    // Real rendering lands in later tasks; skeleton only mounts and unmounts.
+    if (!shadow) return;
+    const stage = shadow.querySelector('.stage') as HTMLElement;
+    stage.innerHTML = '';
+    const item = items[index];
+    if (!item) return;
+    if (item.kind === 'image') {
+      const img = document.createElement('img');
+      const upgraded = upgradeImageSrc(item.src);
+      img.src = upgraded;
+      img.alt = item.alt ?? '';
+      img.addEventListener(
+        'error',
+        () => { if (img.src !== item.src) img.src = item.src; },
+        { once: true },
+      );
+      stage.appendChild(img);
+    }
   };
 
   return {

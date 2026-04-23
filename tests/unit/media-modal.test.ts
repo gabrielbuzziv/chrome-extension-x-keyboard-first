@@ -31,4 +31,33 @@ describe('createMediaModal', () => {
     modal.open([], 0);
     expect(modal.isOpen()).toBe(false);
   });
+
+  function getImg(host: Element | null): HTMLImageElement | null {
+    const h = host as HTMLElement | null;
+    return h?.shadowRoot?.querySelector('img') ?? null;
+  }
+
+  it('open() with an image renders <img> and swaps name=small → name=large', () => {
+    modal = createMediaModal();
+    modal.open([{ kind: 'image', src: 'https://pbs.twimg.com/media/X?format=jpg&name=small' }], 0);
+    const img = getImg(document.querySelector('[data-xkbd-media]'));
+    expect(img).not.toBeNull();
+    expect(img!.src).toBe('https://pbs.twimg.com/media/X?format=jpg&name=large');
+  });
+
+  it('open() with an image without a name= param appends &name=large', () => {
+    modal = createMediaModal();
+    modal.open([{ kind: 'image', src: 'https://pbs.twimg.com/media/Y?format=jpg' }], 0);
+    const img = getImg(document.querySelector('[data-xkbd-media]'));
+    expect(img!.src).toBe('https://pbs.twimg.com/media/Y?format=jpg&name=large');
+  });
+
+  it('falls back to original src on <img> error', () => {
+    modal = createMediaModal();
+    const orig = 'https://pbs.twimg.com/media/Z?format=jpg&name=small';
+    modal.open([{ kind: 'image', src: orig }], 0);
+    const img = getImg(document.querySelector('[data-xkbd-media]'))!;
+    img.dispatchEvent(new Event('error'));
+    expect(img.src).toBe(orig);
+  });
 });

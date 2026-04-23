@@ -1,6 +1,6 @@
 ---
 name: Shortcuts — refresh, load-new, pinned navigation
-description: Add R (reload), . (load new posts pill), and make every navigation pin the active post flush under the sticky header
+description: Add R (reload), . (load new posts pill), and make every navigation pin the active post's thread group flush under the sticky header
 type: design
 ---
 
@@ -18,7 +18,7 @@ Extend the keyboard-first UX with two new shortcuts and change navigation scroll
 | `.` | Click the "Show N posts" / "Mostrar N posts" pill if visible. No-op otherwise (silent). |
 | `Home` / `gg` | Scroll window to `y = 0`, then on the next frame pin the first entry in the registry. Ensures the true first post is shown even after deep scrolling (X virtualizes the DOM). |
 | `End` / `G` | Scroll window to `y = document.documentElement.scrollHeight`, then on the next frame pin the last entry in the registry. |
-| `j` / `↓` / `k` / `↑` | Unchanged routing, but now always pins the active post flush under the header (see below). |
+| `j` / `↓` / `k` / `↑` | Unchanged routing. Scroll pins the top of the active post's **thread group** flush under the header. Moving within a thread does not re-pin. |
 | `Space` / `⇧Space` | Unchanged (page down/up + nearest-to-viewport pick) — inherits pinning because it calls `moveTo`. |
 
 All other bindings unchanged.
@@ -31,21 +31,50 @@ All other bindings unchanged.
 
 ### New behavior
 
-On every `moveTo`, scroll the window unconditionally so the active article's top edge sits at `headerBottom + SCROLL_PAD`. The next post peeks below, giving continuous context.
+On every `moveTo`, scroll the window unconditionally so the **top of the active post's thread group** sits at `headerBottom + SCROLL_PAD`. The next post peeks below. Navigating within a thread group does not re-pin (see thread handling below).
 
 ```ts
 // src/content/navigator.ts
+const THREAD_GAP_PX = 16;
+
+function findGroupTop(entries: TweetEntry[], idx: number): TweetEntry {
+  let i = idx;
+  while (i > 0) {
+    const prev = entries[i - 1].article.getBoundingClientRect();
+    const cur = entries[i].article.getBoundingClientRect();
+    if (cur.top - prev.bottom > THREAD_GAP_PX) break;
+    i--;
+  }
+  return entries[i];
+}
+
 const focusAndScroll = () => {
   if (!activeId) return;
   const entry = registry.findById(activeId);
   if (!entry) return;
   entry.article.focus({ preventScroll: true });
-  const rect = entry.article.getBoundingClientRect();
-  const headerBottom = topObstructionHeight();
-  const targetTop = headerBottom + SCROLL_PAD;
+  const entries = registry.current();
+  const idx = entries.findIndex((e) => e.id === activeId);
+  if (idx < 0) return;
+  const groupTop = findGroupTop(entries, idx);
+  const rect = groupTop.article.getBoundingClientRect();
+  const targetTop = topObstructionHeight() + SCROLL_PAD;
   window.scrollBy({ top: rect.top - targetTop, behavior: 'auto' });
 };
 ```
+
+### Thread / conversation grouping
+
+X renders each post in a conversation as its own `article`, so `j`/`k` visits each one. Without grouping, every sub-post would re-pin and the whole thread would feel jittery.
+
+Grouping rule: two consecutive entries belong to the same group when their visual gap (`next.top − prev.bottom`) is `≤ THREAD_GAP_PX` (default 16px). Separate feed items have a ~32–48px gap (padding + divider); thread/conversation posts are flush. `findGroupTop` walks backward from the active entry while this holds and returns the group's topmost article.
+
+Effects:
+- Navigating within a thread (3 sub-posts, say): active ring moves, scroll stays anchored to the group's top article → no jitter.
+- Crossing out of the thread into the next feed item: the new item is its own group (gap > threshold), so it pins normally.
+- Single posts behave as a group of one — identical to the basic pinning rule.
+
+If the 16px threshold misfires empirically (e.g., X changes padding), tune it as a constant. No selector surgery needed.
 
 ### `first` / `last` with virtualization
 
@@ -111,7 +140,7 @@ The pre-scroll is harmless when the browser already resets scroll and guarantees
   - `KeyBindingsDeps` — add `reload: () => void` for testability (default to `location.reload`).
   - `onKeyDown` switch — add `reload` branch; extend existing `click` branch to support `newPostsPill`.
 - `src/content/navigator.ts`
-  - Replace `focusAndScroll` body per above.
+  - Replace `focusAndScroll` body per above; add `findGroupTop` helper and `THREAD_GAP_PX` constant.
   - Replace `first`/`last` branches per above.
 - `src/content/index.ts` — pass `reload: () => location.reload()` into `attachKeyBindings`.
 
@@ -127,7 +156,9 @@ The pre-scroll is harmless when the browser already resets scroll and guarantees
 
 ### `tests/unit/navigator.test.ts`
 
-- After `dispatch('next')` / `dispatch('prev')`, active article's `getBoundingClientRect().top` equals `headerBottom + SCROLL_PAD` (allowing ±1px).
+- After `dispatch('next')` / `dispatch('prev')` between single (un-grouped) posts, active article's `getBoundingClientRect().top` equals `headerBottom + SCROLL_PAD` (allowing ±1px).
+- Thread-grouping: build three articles where `articles[1]` and `articles[2]` are flush with `articles[0]` (gap ≤ 16px) and mock rects accordingly. Starting active = `articles[0]`, dispatch `next`: `articles[0].top` should still equal `headerBottom + SCROLL_PAD` (scroll did NOT move). Dispatch `next` again: same — still pinned at `articles[0]`.
+- Thread-exit: add `articles[3]` with a gap > 16px after `articles[2]`. From active = `articles[2]`, dispatch `next`: active moves to `articles[3]` and `articles[3].top` becomes `headerBottom + SCROLL_PAD`.
 - `dispatch('first')` with a mocked `window.scrollTo`: verify `scrollTo({ top: 0 })` is called, and after RAF the first entry becomes active.
 - `dispatch('last')` analogous for `document.documentElement.scrollHeight` and last entry.
 - Existing restore-from-thread and subscribe behavior unchanged.
@@ -137,6 +168,7 @@ The pre-scroll is harmless when the browser already resets scroll and guarantees
 - Reload on `R` while scrolled mid-feed; confirm browser reloads and scroll resets.
 - Scroll ~100 posts; press `Home`; confirm page fully jumps to top and the real first tweet is pinned under the tab bar.
 - `j`/`k` through 20 posts; confirm each selected post lands flush under the tabs with the next post peeking below.
+- Scroll to a conversation/thread group (two or more posts linked by the left-side connector line); `j` through the thread; confirm the viewport stays anchored at the thread's top post while the active ring moves through each sub-post. Press `j` once more to exit the thread; confirm the next feed item pins normally.
 - Wait for "Mostrar N posts" pill to appear (or trigger by leaving the tab and coming back); press `.`; confirm it clicks.
 - Press `n` on a timeline; confirm X's native compose-post dialog still opens.
 - `End`/`G` jumps to bottom of loaded feed.

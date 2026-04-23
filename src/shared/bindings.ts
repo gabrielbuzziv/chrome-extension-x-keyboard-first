@@ -9,6 +9,7 @@ export const BINDINGS: ReadonlyArray<readonly [string, string]> = [
   ['Space', 'Page down (when focused post is not truncated)'],
   ['⇧Space', 'Page up'],
   ['t', 'Translate focused post'],
+  ['o → 1..9', 'Open link / media in active post'],
   ['r', 'Reload page'],
   ['.', 'Load new posts ("Mostrar N posts")'],
   ['1 / 2', 'For You / Following (Home)'],

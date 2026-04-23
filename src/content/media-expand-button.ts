@@ -16,8 +16,53 @@ export function createMediaExpandButton(
   deps: MediaExpandButtonDeps,
 ): MediaExpandButton {
   const rendered: HTMLElement[] = [];
+  let repositionRaf: number | null = null;
+  let listening = false;
+
+  const reposition = (): void => {
+    if (rendered.length === 0) return;
+    const article = deps.nav.activeArticle();
+    if (!article) return;
+    const videos = queryAll(SELECTORS.VIDEO, article) as HTMLVideoElement[];
+    rendered.forEach((host, i) => {
+      const video = videos[i];
+      if (!video) return;
+      const rect = video.getBoundingClientRect();
+      host.style.top = `${rect.top + window.scrollY + 6}px`;
+      host.style.left = `${rect.right + window.scrollX - 34}px`;
+    });
+  };
+
+  const scheduleReposition = (): void => {
+    if (repositionRaf != null) return;
+    repositionRaf = requestAnimationFrame(() => {
+      repositionRaf = null;
+      reposition();
+    });
+  };
+
+  const onScrollOrResize = (): void => scheduleReposition();
+
+  const ensureListeners = (): void => {
+    if (listening) return;
+    window.addEventListener('scroll', onScrollOrResize, { passive: true });
+    window.addEventListener('resize', onScrollOrResize, { passive: true });
+    listening = true;
+  };
+
+  const removeListeners = (): void => {
+    if (!listening) return;
+    window.removeEventListener('scroll', onScrollOrResize);
+    window.removeEventListener('resize', onScrollOrResize);
+    listening = false;
+  };
 
   const clear = () => {
+    removeListeners();
+    if (repositionRaf != null) {
+      cancelAnimationFrame(repositionRaf);
+      repositionRaf = null;
+    }
     while (rendered.length) rendered.pop()?.remove();
   };
 
@@ -70,6 +115,7 @@ export function createMediaExpandButton(
       document.body.appendChild(host);
       rendered.push(host);
     });
+    if (rendered.length > 0) ensureListeners();
   };
 
   const unsub = deps.registry.subscribe(paint);

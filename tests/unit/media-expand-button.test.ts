@@ -61,6 +61,20 @@ describe('createMediaExpandButton', () => {
     btn.stop();
   });
 
+  it('repositions the button on window scroll', async () => {
+    const article = document.createElement('article');
+    article.setAttribute('data-testid', 'tweet');
+    article.innerHTML = `<div data-testid="videoPlayer"><video></video></div>`;
+    document.body.appendChild(article);
+    const deps = makeDeps(article);
+    const btn = createMediaExpandButton(deps as any);
+    deps.registry.notify();
+    window.dispatchEvent(new Event('scroll'));
+    await new Promise<void>((r) => requestAnimationFrame(() => r()));
+    expect(document.querySelectorAll('[data-xkbd-expand]').length).toBe(1);
+    btn.stop();
+  });
+
   it('removes existing buttons when active article changes', () => {
     const art1 = document.createElement('article');
     art1.setAttribute('data-testid', 'tweet');

@@ -87,6 +87,17 @@ export function createLinkMode(deps: LinkModeDeps): LinkMode {
   let shadow: ShadowRoot | null = null;
   let unsubRegistry: (() => void) | null = null;
   let unsubRouter: (() => void) | null = null;
+  let repositionRaf: number | null = null;
+
+  const scheduleReposition = (): void => {
+    if (repositionRaf != null) return;
+    repositionRaf = requestAnimationFrame(() => {
+      repositionRaf = null;
+      if (active) reposition();
+    });
+  };
+
+  const onScrollOrResize = (): void => scheduleReposition();
 
   const paintBadges = (): void => {
     host = document.createElement('div');
@@ -108,6 +119,8 @@ export function createLinkMode(deps: LinkModeDeps): LinkMode {
     `;
     document.body.appendChild(host);
     reposition();
+    window.addEventListener('scroll', onScrollOrResize, { passive: true });
+    window.addEventListener('resize', onScrollOrResize, { passive: true });
   };
 
   const reposition = (): void => {
@@ -129,6 +142,12 @@ export function createLinkMode(deps: LinkModeDeps): LinkMode {
     host?.remove();
     host = null;
     shadow = null;
+    window.removeEventListener('scroll', onScrollOrResize);
+    window.removeEventListener('resize', onScrollOrResize);
+    if (repositionRaf != null) {
+      cancelAnimationFrame(repositionRaf);
+      repositionRaf = null;
+    }
   };
 
   const doExit = (): void => {

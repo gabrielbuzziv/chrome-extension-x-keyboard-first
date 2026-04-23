@@ -220,4 +220,31 @@ describe('createLinkMode', () => {
     expect(lm.isActive()).toBe(false);
     lm.stop();
   });
+
+  it('window scroll triggers reposition via RAF when link-mode is active', async () => {
+    const article = makeArticle('<div data-testid="tweetText"><a role="link" href="https://t.co/x">x</a></div>');
+    const deps = makeDeps(article);
+    const lm = createLinkMode(deps as any);
+    lm.enter();
+    const host = document.querySelector('[data-xkbd-link-mode]') as HTMLElement;
+    const initial = host.shadowRoot!.querySelectorAll('.badge').length;
+    expect(initial).toBeGreaterThan(0);
+    window.dispatchEvent(new Event('scroll'));
+    await new Promise<void>((r) => requestAnimationFrame(() => r()));
+    const after = host.shadowRoot!.querySelectorAll('.badge').length;
+    expect(after).toBe(initial);
+    lm.stop();
+  });
+
+  it('scroll listener is removed after exit', () => {
+    const article = makeArticle('<div data-testid="tweetText"><a role="link" href="https://t.co/x">x</a></div>');
+    const deps = makeDeps(article);
+    const lm = createLinkMode(deps as any);
+    lm.enter();
+    lm.exit();
+    expect(document.querySelector('[data-xkbd-link-mode]')).toBeNull();
+    window.dispatchEvent(new Event('scroll'));
+    expect(document.querySelector('[data-xkbd-link-mode]')).toBeNull();
+    lm.stop();
+  });
 });

@@ -132,4 +132,92 @@ describe('createLinkMode', () => {
     expect(document.querySelector('[data-xkbd-link-mode]')).toBeNull();
     lm.stop();
   });
+
+  it('handleKey "1" activates first bodyUrl via window.open and exits', () => {
+    const article = makeArticle('<div data-testid="tweetText"><a role="link" href="https://t.co/x">x</a></div>');
+    const deps = makeDeps(article);
+    const lm = createLinkMode(deps as any);
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+    lm.enter();
+    lm.handleKey(new KeyboardEvent('keydown', { key: '1' }));
+    expect(open).toHaveBeenCalledWith('https://t.co/x', '_blank', 'noopener,noreferrer');
+    expect(lm.isActive()).toBe(false);
+    open.mockRestore();
+    lm.stop();
+  });
+
+  it('handleKey "5" with only 2 targets exits without activating', () => {
+    const article = makeArticle('<div data-testid="tweetText"><a role="link" href="https://t.co/x">x</a><a role="link" href="https://t.co/y">y</a></div>');
+    const deps = makeDeps(article);
+    const lm = createLinkMode(deps as any);
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+    lm.enter();
+    lm.handleKey(new KeyboardEvent('keydown', { key: '5' }));
+    expect(open).not.toHaveBeenCalled();
+    expect(lm.isActive()).toBe(false);
+    open.mockRestore();
+    lm.stop();
+  });
+
+  it('handleKey Escape exits without activating', () => {
+    const article = makeArticle('<div data-testid="tweetText"><a role="link" href="https://t.co/x">x</a></div>');
+    const deps = makeDeps(article);
+    const lm = createLinkMode(deps as any);
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+    lm.enter();
+    lm.handleKey(new KeyboardEvent('keydown', { key: 'Escape' }));
+    expect(open).not.toHaveBeenCalled();
+    expect(lm.isActive()).toBe(false);
+    open.mockRestore();
+    lm.stop();
+  });
+
+  it('handleKey letter exits silently', () => {
+    const article = makeArticle('<div data-testid="tweetText"><a role="link" href="https://t.co/x">x</a></div>');
+    const deps = makeDeps(article);
+    const lm = createLinkMode(deps as any);
+    lm.enter();
+    lm.handleKey(new KeyboardEvent('keydown', { key: 'x' }));
+    expect(lm.isActive()).toBe(false);
+    lm.stop();
+  });
+
+  it('handleKey "1" on a video target calls mediaModal.open with the media items and the right index', () => {
+    const article = makeArticle(`
+      <div data-testid="videoPlayer"><video></video></div>
+      <div data-testid="tweetPhoto"><img src="https://x/1?name=small"></div>
+    `);
+    const deps = makeDeps(article);
+    const lm = createLinkMode(deps as any);
+    lm.enter();
+    lm.handleKey(new KeyboardEvent('keydown', { key: '2' })); // image is second in DOM order
+    expect(deps.mediaModal.open).toHaveBeenCalledTimes(1);
+    const [items, index] = (deps.mediaModal.open as any).mock.calls[0];
+    expect(items.length).toBe(2);
+    expect(items[0].kind).toBe('video');
+    expect(items[1].kind).toBe('image');
+    expect(index).toBe(1);
+    lm.stop();
+  });
+
+  it('registry rebuild that disconnects the article exits link-mode', () => {
+    const article = makeArticle('<div data-testid="tweetText"><a role="link" href="https://t.co/x">x</a></div>');
+    const deps = makeDeps(article);
+    const lm = createLinkMode(deps as any);
+    lm.enter();
+    article.remove();
+    deps.registry.triggerRebuild();
+    expect(lm.isActive()).toBe(false);
+    lm.stop();
+  });
+
+  it('router change exits link-mode', () => {
+    const article = makeArticle('<div data-testid="tweetText"><a role="link" href="https://t.co/x">x</a></div>');
+    const deps = makeDeps(article);
+    const lm = createLinkMode(deps as any);
+    lm.enter();
+    deps.router.triggerChange('thread');
+    expect(lm.isActive()).toBe(false);
+    lm.stop();
+  });
 });

@@ -1,7 +1,7 @@
 import { SELECTORS, queryAll } from '../shared/selectors';
 import type { Registry } from './tweet-registry';
 import type { RouteWatcher } from './route-watcher';
-import type { MediaModal } from './media-modal';
+import type { MediaItem, MediaModal } from './media-modal';
 
 export type LinkTargetKind =
   | 'bodyUrl'
@@ -143,6 +143,48 @@ export function createLinkMode(deps: LinkModeDeps): LinkMode {
     unsubRouter = null;
   };
 
+  const buildMediaItems = (root: HTMLElement): MediaItem[] => {
+    const items: MediaItem[] = [];
+    enumerateTargets(root).forEach((t) => {
+      if (t.kind === 'image') {
+        items.push({ kind: 'image', src: (t.el as HTMLImageElement).src });
+      } else if (t.kind === 'video') {
+        items.push({ kind: 'video', el: t.el as HTMLVideoElement });
+      }
+    });
+    return items;
+  };
+
+  const activate = (t: LinkTarget): void => {
+    switch (t.kind) {
+      case 'bodyUrl':
+      case 'cardLink': {
+        const href =
+          t.el instanceof HTMLAnchorElement
+            ? t.el.href
+            : (t.el.querySelector('a[href]') as HTMLAnchorElement | null)?.href;
+        if (href) window.open(href, '_blank', 'noopener,noreferrer');
+        return;
+      }
+      case 'quotedTweet': {
+        const link = t.el.querySelector<HTMLAnchorElement>(
+          'a[href*="/status/"][role="link"]',
+        );
+        if (link) link.click();
+        return;
+      }
+      case 'image':
+      case 'video': {
+        const items = buildMediaItems(article!);
+        const index = items.findIndex((m) =>
+          m.kind === 'video' ? m.el === t.el : m.src === (t.el as HTMLImageElement).src,
+        );
+        if (index >= 0) deps.mediaModal.open(items, index);
+        return;
+      }
+    }
+  };
+
   return {
     enter(): boolean {
       if (active) return true;
@@ -165,8 +207,20 @@ export function createLinkMode(deps: LinkModeDeps): LinkMode {
     isActive(): boolean {
       return active;
     },
-    handleKey(_e: KeyboardEvent): void {
-      /* Task 11 */
+    handleKey(e: KeyboardEvent): void {
+      if (!active) return;
+      if (e.key === 'Escape') {
+        doExit();
+        return;
+      }
+      if (/^[1-9]$/.test(e.key)) {
+        const i = Number(e.key) - 1;
+        if (i < targets.length) activate(targets[i]);
+        doExit();
+        return;
+      }
+      // Any other printable / functional key exits silently.
+      doExit();
     },
     stop(): void {
       doExit();

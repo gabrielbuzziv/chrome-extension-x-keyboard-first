@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { enumerateTargets } from '../../src/content/link-mode';
+import { describe, it, expect, vi } from 'vitest';
+import { createLinkMode, enumerateTargets } from '../../src/content/link-mode';
 
 function makeArticle(html: string): HTMLElement {
   const a = document.createElement('article');
@@ -62,5 +62,74 @@ describe('enumerateTargets', () => {
     ).join('');
     const article = makeArticle(items);
     expect(enumerateTargets(article).length).toBe(9);
+  });
+});
+
+function makeDeps(active: HTMLElement | null) {
+  const registryListeners = new Set<() => void>();
+  const routerListeners = new Set<(m: 'timeline' | 'thread') => void>();
+  return {
+    nav: { activeArticle: () => active },
+    registry: {
+      subscribe: (fn: () => void) => {
+        registryListeners.add(fn);
+        return () => registryListeners.delete(fn);
+      },
+      triggerRebuild: () => registryListeners.forEach((fn) => fn()),
+    },
+    router: {
+      subscribe: (fn: (m: 'timeline' | 'thread') => void) => {
+        routerListeners.add(fn);
+        return () => routerListeners.delete(fn);
+      },
+      triggerChange: (m: 'timeline' | 'thread') =>
+        routerListeners.forEach((fn) => fn(m)),
+    },
+    mediaModal: { open: vi.fn() },
+  };
+}
+
+describe('createLinkMode', () => {
+  it('isActive() is false initially', () => {
+    const article = makeArticle('<div data-testid="tweetText"><a role="link" href="https://t.co/x">x</a></div>');
+    const deps = makeDeps(article);
+    const lm = createLinkMode(deps as any);
+    expect(lm.isActive()).toBe(false);
+    lm.stop();
+  });
+
+  it('enter() with no active article returns false and stays inactive', () => {
+    const deps = makeDeps(null);
+    const lm = createLinkMode(deps as any);
+    expect(lm.enter()).toBe(false);
+    expect(lm.isActive()).toBe(false);
+    lm.stop();
+  });
+
+  it('enter() with targets paints badges with digits 1..N and activates', () => {
+    const article = makeArticle(`
+      <div data-testid="tweetText">
+        <a role="link" href="https://t.co/a">a</a>
+        <a role="link" href="https://t.co/b">b</a>
+      </div>`);
+    const deps = makeDeps(article);
+    const lm = createLinkMode(deps as any);
+    expect(lm.enter()).toBe(true);
+    expect(lm.isActive()).toBe(true);
+    const host = document.querySelector('[data-xkbd-link-mode]') as HTMLElement;
+    const badges = host.shadowRoot!.querySelectorAll('.badge');
+    expect(Array.from(badges).map((b) => b.textContent)).toEqual(['1', '2']);
+    lm.stop();
+  });
+
+  it('exit() removes badges and deactivates', () => {
+    const article = makeArticle('<div data-testid="tweetText"><a role="link" href="https://t.co/x">x</a></div>');
+    const deps = makeDeps(article);
+    const lm = createLinkMode(deps as any);
+    lm.enter();
+    lm.exit();
+    expect(lm.isActive()).toBe(false);
+    expect(document.querySelector('[data-xkbd-link-mode]')).toBeNull();
+    lm.stop();
   });
 });

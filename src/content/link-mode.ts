@@ -1,4 +1,7 @@
 import { SELECTORS, queryAll } from '../shared/selectors';
+import type { Registry } from './tweet-registry';
+import type { RouteWatcher } from './route-watcher';
+import type { MediaModal } from './media-modal';
 
 export type LinkTargetKind =
   | 'bodyUrl'
@@ -59,4 +62,114 @@ export function enumerateTargets(article: HTMLElement): LinkTarget[] {
   });
 
   return all.slice(0, MAX_TARGETS);
+}
+
+export interface LinkMode {
+  enter(): boolean;
+  exit(): void;
+  isActive(): boolean;
+  handleKey(e: KeyboardEvent): void;
+  stop(): void;
+}
+
+export interface LinkModeDeps {
+  nav: { activeArticle: () => HTMLElement | null };
+  registry: Pick<Registry, 'subscribe'>;
+  router: Pick<RouteWatcher, 'subscribe'>;
+  mediaModal: Pick<MediaModal, 'open'>;
+}
+
+export function createLinkMode(deps: LinkModeDeps): LinkMode {
+  let active = false;
+  let targets: LinkTarget[] = [];
+  let article: HTMLElement | null = null;
+  let host: HTMLDivElement | null = null;
+  let shadow: ShadowRoot | null = null;
+  let unsubRegistry: (() => void) | null = null;
+  let unsubRouter: (() => void) | null = null;
+
+  const paintBadges = (): void => {
+    host = document.createElement('div');
+    host.dataset.xkbdLinkMode = '';
+    shadow = host.attachShadow({ mode: 'open' });
+    shadow.innerHTML = `
+      <style>
+        :host { all: initial; }
+        .badge {
+          position: absolute; pointer-events: none;
+          background: linear-gradient(180deg, #1f2832, #131a22);
+          color: #d6dde4; font: 700 12px/1 ui-monospace, Menlo, monospace;
+          padding: 2px 6px; border-radius: 4px;
+          box-shadow: 0 0 0 1px rgba(29,155,240,0.45),
+                      0 4px 10px -4px rgba(0,0,0,0.7);
+          z-index: 2147483646;
+        }
+      </style>
+    `;
+    document.body.appendChild(host);
+    reposition();
+  };
+
+  const reposition = (): void => {
+    if (!shadow) return;
+    shadow.querySelectorAll('.badge').forEach((b) => b.remove());
+    targets.forEach((t, i) => {
+      const rect = t.el.getBoundingClientRect();
+      const badge = document.createElement('span');
+      badge.className = 'badge';
+      badge.dataset.digit = String(i + 1);
+      badge.textContent = String(i + 1);
+      badge.style.top = `${rect.top + window.scrollY + 4}px`;
+      badge.style.left = `${rect.left + window.scrollX + 4}px`;
+      shadow!.appendChild(badge);
+    });
+  };
+
+  const unpaintBadges = (): void => {
+    host?.remove();
+    host = null;
+    shadow = null;
+  };
+
+  const doExit = (): void => {
+    if (!active) return;
+    active = false;
+    targets = [];
+    article = null;
+    unpaintBadges();
+    unsubRegistry?.();
+    unsubRegistry = null;
+    unsubRouter?.();
+    unsubRouter = null;
+  };
+
+  return {
+    enter(): boolean {
+      if (active) return true;
+      article = deps.nav.activeArticle();
+      if (!article) return false;
+      targets = enumerateTargets(article);
+      if (targets.length === 0) return false;
+      active = true;
+      paintBadges();
+      unsubRegistry = deps.registry.subscribe(() => {
+        if (!article || !article.isConnected) doExit();
+        else reposition();
+      });
+      unsubRouter = deps.router.subscribe(() => doExit());
+      return true;
+    },
+    exit(): void {
+      doExit();
+    },
+    isActive(): boolean {
+      return active;
+    },
+    handleKey(_e: KeyboardEvent): void {
+      /* Task 11 */
+    },
+    stop(): void {
+      doExit();
+    },
+  };
 }

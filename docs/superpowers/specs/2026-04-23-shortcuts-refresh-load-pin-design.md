@@ -1,6 +1,6 @@
 ---
 name: Shortcuts — refresh, load-new, pinned navigation
-description: Add R (reload), N (load new posts pill), and make every navigation pin the active post flush under the sticky header
+description: Add R (reload), . (load new posts pill), and make every navigation pin the active post flush under the sticky header
 type: design
 ---
 
@@ -15,7 +15,7 @@ Extend the keyboard-first UX with two new shortcuts and change navigation scroll
 | Key | Behavior |
 |---|---|
 | `r` / `R` | `window.scrollTo(0, 0)` then `location.reload()`. The pre-scroll guards against browsers that restore the previous scroll position across a reload. |
-| `n` / `N` | Click the "Show N posts" / "Mostrar N posts" pill if visible. No-op otherwise (silent). |
+| `.` | Click the "Show N posts" / "Mostrar N posts" pill if visible. No-op otherwise (silent). |
 | `Home` / `gg` | Scroll window to `y = 0`, then on the next frame pin the first entry in the registry. Ensures the true first post is shown even after deep scrolling (X virtualizes the DOM). |
 | `End` / `G` | Scroll window to `y = document.documentElement.scrollHeight`, then on the next frame pin the last entry in the registry. |
 | `j` / `↓` / `k` / `↑` | Unchanged routing, but now always pins the active post flush under the header (see below). |
@@ -103,10 +103,10 @@ The pre-scroll is harmless when the browser already resets scroll and guarantees
 
 ## Files touched
 
-- `src/shared/bindings.ts` — add `['r', 'Refresh page']` and `['n', 'Load new posts']` rows.
+- `src/shared/bindings.ts` — add `['r', 'Refresh page']` and `['.', 'Load new posts']` rows.
 - `src/shared/selectors.ts` — add `NEW_POSTS_PILL`.
 - `src/content/key-bindings.ts`
-  - `resolve()` — handle `r`/`R` (new `ResolvedAction` variant `{ kind: 'reload' }`) and `n`/`N` (new `ResolvedAction` variant `{ kind: 'click'; target: 'newPostsPill' }`).
+  - `resolve()` — handle `r`/`R` (new `ResolvedAction` variant `{ kind: 'reload' }`) and `.` (new `ResolvedAction` variant `{ kind: 'click'; target: 'newPostsPill' }`). Preserve X's native `n`/`N` for new-post composer by not binding them.
   - Add `findNewPostsPill(root: ParentNode): HTMLElement | null` helper with selector + text fallback.
   - `KeyBindingsDeps` — add `reload: () => void` for testability (default to `location.reload`).
   - `onKeyDown` switch — add `reload` branch; extend existing `click` branch to support `newPostsPill`.
@@ -120,9 +120,10 @@ The pre-scroll is harmless when the browser already resets scroll and guarantees
 ### `tests/unit/key-bindings.test.ts`
 
 - `r` and `R` call the injected `reload` dep exactly once and do not dispatch nav.
-- `n` when a pill exists clicks it; when no pill exists does nothing.
-- `n` pill detection covers both the `data-testid="pillLabel"` selector and the Portuguese text fallback (`"Mostrar 70 posts"`).
-- `r` / `n` respect the existing guards: editable targets, open modals, and help overlay open → no-op.
+- `.` when a pill exists clicks it; when no pill exists does nothing.
+- `.` pill detection covers both the `data-testid="pillLabel"` selector and the Portuguese text fallback (`"Mostrar 70 posts"`).
+- `r` / `.` respect the existing guards: editable targets, open modals, and help overlay open → no-op.
+- Pressing `n` / `N` is **not** handled by the extension (X's native new-post shortcut must still work).
 
 ### `tests/unit/navigator.test.ts`
 
@@ -136,11 +137,12 @@ The pre-scroll is harmless when the browser already resets scroll and guarantees
 - Reload on `R` while scrolled mid-feed; confirm browser reloads and scroll resets.
 - Scroll ~100 posts; press `Home`; confirm page fully jumps to top and the real first tweet is pinned under the tab bar.
 - `j`/`k` through 20 posts; confirm each selected post lands flush under the tabs with the next post peeking below.
-- Wait for "Mostrar N posts" pill to appear (or trigger by leaving the tab and coming back); press `N`; confirm it clicks.
+- Wait for "Mostrar N posts" pill to appear (or trigger by leaving the tab and coming back); press `.`; confirm it clicks.
+- Press `n` on a timeline; confirm X's native compose-post dialog still opens.
 - `End`/`G` jumps to bottom of loaded feed.
 
 ## Out of scope
 
 - Soft refresh (clicking active timeline tab) — user chose hard reload.
 - Auto-scroll animations / smooth scroll — we use `behavior: 'auto'` for snappy feel.
-- Surfacing a visual error when `N` has no pill target — silent no-op is fine.
+- Surfacing a visual error when `.` has no pill target — silent no-op is fine.

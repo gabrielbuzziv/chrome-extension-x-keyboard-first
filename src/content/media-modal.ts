@@ -55,6 +55,33 @@ export function createMediaModal(): MediaModal {
     shadow = null;
   };
 
+  interface Reparented {
+    el: HTMLVideoElement;
+    parent: Node;
+    nextSibling: Node | null;
+  }
+  let reparented: Reparented | null = null;
+
+  const reparentVideo = (video: HTMLVideoElement) => {
+    const parent = video.parentNode;
+    if (!parent) return;
+    reparented = { el: video, parent, nextSibling: video.nextSibling };
+  };
+
+  const restoreVideo = () => {
+    if (!reparented) return;
+    const { el, parent, nextSibling } = reparented;
+    // If the parent was detached mid-flight, skip — X will re-render on scroll-back.
+    if (parent.isConnected) {
+      if (nextSibling && nextSibling.parentNode === parent) {
+        parent.insertBefore(el, nextSibling);
+      } else {
+        parent.appendChild(el);
+      }
+    }
+    reparented = null;
+  };
+
   const render = () => {
     if (!shadow) return;
     const stage = shadow.querySelector('.stage') as HTMLElement;
@@ -72,7 +99,14 @@ export function createMediaModal(): MediaModal {
         { once: true },
       );
       stage.appendChild(img);
+      return;
     }
+    // video
+    if (!reparented || reparented.el !== item.el) {
+      restoreVideo();
+      reparentVideo(item.el);
+    }
+    stage.appendChild(item.el);
   };
 
   return {
@@ -85,6 +119,7 @@ export function createMediaModal(): MediaModal {
     },
     close() {
       if (!host) return;
+      restoreVideo();
       items = [];
       index = 0;
       unmount();
@@ -96,6 +131,7 @@ export function createMediaModal(): MediaModal {
       // Fleshed out in a later task.
     },
     stop() {
+      restoreVideo();
       unmount();
     },
   };

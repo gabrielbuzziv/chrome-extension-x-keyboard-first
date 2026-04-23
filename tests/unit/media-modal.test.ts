@@ -60,4 +60,33 @@ describe('createMediaModal', () => {
     img.dispatchEvent(new Event('error'));
     expect(img.src).toBe(orig);
   });
+
+  it('open() with a video reparents the element into the modal stage', () => {
+    const source = document.createElement('div');
+    const video = document.createElement('video');
+    source.appendChild(video);
+    document.body.appendChild(source);
+
+    modal = createMediaModal();
+    modal.open([{ kind: 'video', el: video }], 0);
+
+    const host = document.querySelector('[data-xkbd-media]') as HTMLElement;
+    expect(host.shadowRoot!.contains(video)).toBe(true);
+    expect(source.contains(video)).toBe(false);
+  });
+
+  it('close() returns the video to its original parent and sibling position', () => {
+    const source = document.createElement('div');
+    const before = document.createElement('span');
+    const video = document.createElement('video');
+    const after = document.createElement('span');
+    source.append(before, video, after);
+    document.body.appendChild(source);
+
+    modal = createMediaModal();
+    modal.open([{ kind: 'video', el: video }], 0);
+    modal.close();
+
+    expect(Array.from(source.children)).toEqual([before, video, after]);
+  });
 });

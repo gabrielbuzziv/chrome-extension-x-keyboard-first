@@ -7,6 +7,7 @@ import { createHelpOverlay } from './help-overlay';
 import { createHintButton } from './hint-button';
 import { createMediaModal } from './media-modal';
 import { createLinkMode } from './link-mode';
+import { createMediaExpandButton } from './media-expand-button';
 
 function main() {
   const registry = createRegistry();
@@ -17,6 +18,7 @@ function main() {
   const hint = createHintButton({ onClick: () => help.toggle() });
   const mediaModal = createMediaModal();
   const linkMode = createLinkMode({ nav, registry, router, mediaModal });
+  const expandBtn = createMediaExpandButton({ nav, registry, mediaModal });
 
   const detach = attachKeyBindings({
     nav,
@@ -32,6 +34,7 @@ function main() {
     () => {
       detach();
       linkMode.stop();
+      expandBtn.stop();
       mediaModal.stop();
       nav.stop();
       help.stop();

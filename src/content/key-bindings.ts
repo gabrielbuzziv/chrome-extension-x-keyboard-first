@@ -29,6 +29,24 @@ const TRANSLATE_TEXTS = [
   'traduire',
 ];
 
+const NEW_POSTS_PILL_RE = /^\s*(show|mostrar|ver)\s+\d+\s+(posts?|tweets?|postagens?)\b/i;
+
+function findNewPostsPill(root: ParentNode = document): HTMLElement | null {
+  const direct = queryFirst(SELECTORS.NEW_POSTS_PILL, root) as HTMLElement | null;
+  if (direct) {
+    const clickable = direct.closest('button, [role="button"]') as HTMLElement | null;
+    return clickable ?? direct;
+  }
+  const nodes = root.querySelectorAll<HTMLElement>(
+    'button, a, [role="button"], [role="link"]',
+  );
+  for (const node of nodes) {
+    const text = node.textContent || node.getAttribute('aria-label') || '';
+    if (NEW_POSTS_PILL_RE.test(text.trim())) return node;
+  }
+  return null;
+}
+
 export interface KeyBindingsDeps {
   nav: Pick<Navigator, 'dispatch' | 'activeArticle'>;
   toggleHelp: () => void;
@@ -174,6 +192,12 @@ export function attachKeyBindings(deps: KeyBindingsDeps): () => void {
       case 'r':
       case 'R':
         return { kind: 'reload' };
+      case '.': {
+        if (findNewPostsPill(document)) {
+          return { kind: 'click', target: 'newPostsPill' };
+        }
+        return null;
+      }
       case '?':
         return { kind: 'help' };
     }
@@ -200,6 +224,10 @@ export function attachKeyBindings(deps: KeyBindingsDeps): () => void {
         reload();
         break;
       case 'click': {
+        if (action.target === 'newPostsPill') {
+          findNewPostsPill(document)?.click();
+          break;
+        }
         const article = deps.nav.activeArticle();
         if (!article) break;
         const btn =

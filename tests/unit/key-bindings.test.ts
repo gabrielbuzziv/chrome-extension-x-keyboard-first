@@ -366,4 +366,68 @@ describe('attachKeyBindings', () => {
     fireKey({ key: 'r' });
     expect(d.reload).not.toHaveBeenCalled();
   });
+
+  it('. clicks the new-posts pill when it exists (via data-testid)', () => {
+    const d = makeDeps();
+    const pill = document.createElement('button');
+    const label = document.createElement('span');
+    label.setAttribute('data-testid', 'pillLabel');
+    label.textContent = 'Mostrar 70 posts';
+    pill.appendChild(label);
+    const click = vi.fn();
+    pill.addEventListener('click', click);
+    document.body.appendChild(pill);
+    detach = attachKeyBindings(d.bindings);
+    const e = fireKey({ key: '.' });
+    expect(click).toHaveBeenCalledTimes(1);
+    expect(e.defaultPrevented).toBe(true);
+  });
+
+  it('. falls back to text match when the data-testid is missing', () => {
+    const d = makeDeps();
+    const pill = document.createElement('button');
+    pill.textContent = 'Show 42 posts';
+    const click = vi.fn();
+    pill.addEventListener('click', click);
+    document.body.appendChild(pill);
+    detach = attachKeyBindings(d.bindings);
+    fireKey({ key: '.' });
+    expect(click).toHaveBeenCalledTimes(1);
+  });
+
+  it('. passes through when no pill exists (no preventDefault, no click)', () => {
+    const d = makeDeps();
+    detach = attachKeyBindings(d.bindings);
+    const e = fireKey({ key: '.' });
+    expect(e.defaultPrevented).toBe(false);
+    expect(d.dispatch).not.toHaveBeenCalled();
+  });
+
+  it('. is ignored when focus is editable (X native new-post shortcut n stays safe)', () => {
+    const d = makeDeps();
+    const pill = document.createElement('button');
+    pill.setAttribute('data-testid', 'pillLabel');
+    pill.textContent = 'Show 5 posts';
+    const click = vi.fn();
+    pill.addEventListener('click', click);
+    document.body.appendChild(pill);
+    const input = document.createElement('input');
+    document.body.appendChild(input);
+    input.focus();
+    detach = attachKeyBindings(d.bindings);
+    const e = new KeyboardEvent('keydown', { key: '.', bubbles: true, cancelable: true });
+    input.dispatchEvent(e);
+    expect(click).not.toHaveBeenCalled();
+  });
+
+  it('n / N are NOT handled by the extension (X native compose-post preserved)', () => {
+    const d = makeDeps();
+    detach = attachKeyBindings(d.bindings);
+    const e1 = fireKey({ key: 'n' });
+    const e2 = fireKey({ key: 'N', shiftKey: true });
+    expect(e1.defaultPrevented).toBe(false);
+    expect(e2.defaultPrevented).toBe(false);
+    expect(d.dispatch).not.toHaveBeenCalled();
+    expect(d.reload).not.toHaveBeenCalled();
+  });
 });

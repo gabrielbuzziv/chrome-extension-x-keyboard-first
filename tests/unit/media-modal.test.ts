@@ -150,4 +150,31 @@ describe('createMediaModal', () => {
     modal.handleKey(new KeyboardEvent('keydown', { key: 'Escape' }));
     expect(modal.isOpen()).toBe(false);
   });
+
+  it('clicking the backdrop (outside stage) closes the modal', () => {
+    modal = createMediaModal();
+    modal.open(itemsFor(2), 0);
+    const host = document.querySelector('[data-xkbd-media]') as HTMLElement;
+    const backdrop = host.shadowRoot!.querySelector('.backdrop') as HTMLElement;
+    backdrop.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true }));
+    expect(modal.isOpen()).toBe(false);
+  });
+
+  it('clicking inside the stage does not close the modal', () => {
+    modal = createMediaModal();
+    modal.open(itemsFor(2), 0);
+    const host = document.querySelector('[data-xkbd-media]') as HTMLElement;
+    const stage = host.shadowRoot!.querySelector('.stage') as HTMLElement;
+    stage.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true }));
+    expect(modal.isOpen()).toBe(true);
+  });
+
+  it('open applies scroll lock to body; close restores it', () => {
+    document.body.style.overflow = 'auto';
+    modal = createMediaModal();
+    modal.open(itemsFor(1), 0);
+    expect(document.body.style.overflow).toBe('hidden');
+    modal.close();
+    expect(document.body.style.overflow).toBe('auto');
+  });
 });

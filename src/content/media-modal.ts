@@ -23,6 +23,7 @@ export function createMediaModal(): MediaModal {
   let items: MediaItem[] = [];
   let index = 0;
   let prevBodyOverflow: string | null = null;
+  let returnFocus: HTMLElement | null = null;
 
   const mount = () => {
     host = document.createElement('div');
@@ -115,6 +116,8 @@ export function createMediaModal(): MediaModal {
     items = [];
     index = 0;
     unmount();
+    returnFocus?.focus?.();
+    returnFocus = null;
   };
 
   const setIndex = (next: number) => {
@@ -203,8 +206,11 @@ export function createMediaModal(): MediaModal {
       if (nextItems.length === 0) return;
       items = nextItems;
       index = Math.max(0, Math.min(nextIndex, items.length - 1));
+      returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
       if (!host) mount();
       render();
+      // Focus the close button for keyboard users; enables Esc / Tab-trap.
+      (shadow!.querySelector('.close') as HTMLButtonElement | null)?.focus();
     },
     close() { doClose(); },
     isOpen() {
@@ -212,6 +218,12 @@ export function createMediaModal(): MediaModal {
     },
     handleKey(e: KeyboardEvent) {
       if (!host) return;
+      if (e.key === 'Tab') {
+        // Focus trap by redirection: always bring focus back to the close button.
+        e.preventDefault();
+        (shadow!.querySelector('.close') as HTMLButtonElement | null)?.focus();
+        return;
+      }
       switch (e.key) {
         case 'ArrowRight':
           setIndex(index + 1);

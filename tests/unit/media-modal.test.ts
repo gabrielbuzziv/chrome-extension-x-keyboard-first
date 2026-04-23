@@ -199,4 +199,35 @@ describe('createMediaModal', () => {
     const img = host.shadowRoot!.querySelector('img') as HTMLImageElement;
     expect(img.src).toContain('I2');
   });
+
+  it('open() focuses the close button', () => {
+    modal = createMediaModal();
+    modal.open(itemsFor(1), 0);
+    const host = document.querySelector('[data-xkbd-media]') as HTMLElement;
+    const close = host.shadowRoot!.querySelector('.close') as HTMLButtonElement;
+    expect(host.shadowRoot!.activeElement).toBe(close);
+  });
+
+  it('handleKey Tab redirects focus to the close button', () => {
+    modal = createMediaModal();
+    modal.open(itemsFor(3), 0);
+    const host = document.querySelector('[data-xkbd-media]') as HTMLElement;
+    const close = host.shadowRoot!.querySelector('.close') as HTMLButtonElement;
+    // Move focus off the close button.
+    const next = host.shadowRoot!.querySelector('.nav.next') as HTMLButtonElement;
+    next.focus();
+    expect(host.shadowRoot!.activeElement).toBe(next);
+    modal.handleKey(new KeyboardEvent('keydown', { key: 'Tab' }));
+    expect(host.shadowRoot!.activeElement).toBe(close);
+  });
+
+  it('close() restores focus to the element that was focused before open()', () => {
+    const trigger = document.createElement('button');
+    document.body.appendChild(trigger);
+    trigger.focus();
+    modal = createMediaModal();
+    modal.open(itemsFor(1), 0);
+    modal.close();
+    expect(document.activeElement).toBe(trigger);
+  });
 });

@@ -12,21 +12,26 @@ function makeDeps() {
   const toggleHelp = vi.fn();
   const switchTab = vi.fn();
   const reload = vi.fn();
+  const modalOpen = vi.fn(() => false);
+  const modalHandleKey = vi.fn();
+  const linkActive = vi.fn(() => false);
+  const linkEnter = vi.fn();
+  const linkHandleKey = vi.fn();
   let open = false;
   let active: HTMLElement | null = null;
   return {
-    dispatch,
-    toggleHelp,
-    switchTab,
-    reload,
+    dispatch, toggleHelp, switchTab, reload,
+    modalOpen, modalHandleKey, linkActive, linkEnter, linkHandleKey,
     setHelpOpen: (v: boolean) => { open = v; },
     setActive: (el: HTMLElement | null) => { active = el; },
+    setModalOpen: (v: boolean) => { modalOpen.mockReturnValue(v); },
+    setLinkActive: (v: boolean) => { linkActive.mockReturnValue(v); },
     bindings: {
       nav: { dispatch, activeArticle: () => active },
-      toggleHelp,
-      switchTab,
-      reload,
+      toggleHelp, switchTab, reload,
       helpOpen: () => open,
+      mediaModal: { isOpen: modalOpen, handleKey: modalHandleKey },
+      linkMode: { isActive: linkActive, enter: linkEnter, handleKey: linkHandleKey },
     },
   };
 }
@@ -490,5 +495,41 @@ describe('attachKeyBindings', () => {
     expect(e2.defaultPrevented).toBe(false);
     expect(d.dispatch).not.toHaveBeenCalled();
     expect(d.reload).not.toHaveBeenCalled();
+  });
+
+  it('o calls linkMode.enter()', () => {
+    const d = makeDeps();
+    // Need an active article so the `o` case doesn't early-return null.
+    const article = document.createElement('article');
+    article.setAttribute('data-testid', 'tweet');
+    document.body.appendChild(article);
+    d.setActive(article);
+    detach = attachKeyBindings(d.bindings);
+    const e = fireKey({ key: 'o' });
+    expect(d.linkEnter).toHaveBeenCalledTimes(1);
+    expect(e.defaultPrevented).toBe(true);
+    expect(d.dispatch).not.toHaveBeenCalled();
+  });
+
+  it('when linkMode.isActive(), all keys route to linkMode.handleKey and normal nav is suppressed', () => {
+    const d = makeDeps();
+    d.setLinkActive(true);
+    detach = attachKeyBindings(d.bindings);
+    fireKey({ key: 'j' });
+    fireKey({ key: '1' });
+    fireKey({ key: 'Escape' });
+    expect(d.linkHandleKey).toHaveBeenCalledTimes(3);
+    expect(d.dispatch).not.toHaveBeenCalled();
+    expect(d.switchTab).not.toHaveBeenCalled();
+  });
+
+  it('when mediaModal.isOpen(), all keys route to mediaModal.handleKey', () => {
+    const d = makeDeps();
+    d.setModalOpen(true);
+    detach = attachKeyBindings(d.bindings);
+    fireKey({ key: 'ArrowRight' });
+    fireKey({ key: 'Escape' });
+    expect(d.modalHandleKey).toHaveBeenCalledTimes(2);
+    expect(d.dispatch).not.toHaveBeenCalled();
   });
 });

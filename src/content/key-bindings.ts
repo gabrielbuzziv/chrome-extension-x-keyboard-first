@@ -53,6 +53,12 @@ export interface KeyBindingsDeps {
   helpOpen: () => boolean;
   switchTab: (index: number) => void;
   reload?: () => void;
+  mediaModal: { isOpen: () => boolean; handleKey: (e: KeyboardEvent) => void };
+  linkMode: {
+    isActive: () => boolean;
+    enter: () => void;
+    handleKey: (e: KeyboardEvent) => void;
+  };
 }
 
 type ResolvedAction =
@@ -60,7 +66,8 @@ type ResolvedAction =
   | { kind: 'help' }
   | { kind: 'tab'; index: number }
   | { kind: 'click'; target: 'showMore' | 'translate' | 'newPostsPill' }
-  | { kind: 'reload' };
+  | { kind: 'reload' }
+  | { kind: 'enterLinkMode' };
 
 function normalize(s: string): string {
   return s
@@ -212,6 +219,10 @@ export function attachKeyBindings(deps: KeyBindingsDeps): () => void {
         }
         return null;
       }
+      case 'o':
+      case 'O':
+        if (!deps.nav.activeArticle()) return null;
+        return { kind: 'enterLinkMode' };
       case '?':
         return { kind: 'help' };
     }
@@ -220,23 +231,28 @@ export function attachKeyBindings(deps: KeyBindingsDeps): () => void {
 
   const onKeyDown = (e: KeyboardEvent) => {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (deps.mediaModal.isOpen()) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      deps.mediaModal.handleKey(e);
+      return;
+    }
+    if (deps.linkMode.isActive()) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      deps.linkMode.handleKey(e);
+      return;
+    }
     const action = resolve(e);
     if (!action) return;
     e.preventDefault();
     e.stopImmediatePropagation();
     switch (action.kind) {
-      case 'help':
-        deps.toggleHelp();
-        break;
-      case 'nav':
-        deps.nav.dispatch(action.cmd);
-        break;
-      case 'tab':
-        deps.switchTab(action.index);
-        break;
-      case 'reload':
-        reload();
-        break;
+      case 'help': deps.toggleHelp(); break;
+      case 'nav': deps.nav.dispatch(action.cmd); break;
+      case 'tab': deps.switchTab(action.index); break;
+      case 'reload': reload(); break;
+      case 'enterLinkMode': deps.linkMode.enter(); break;
       case 'click': {
         if (action.target === 'newPostsPill') {
           findNewPostsPill(document)?.click();

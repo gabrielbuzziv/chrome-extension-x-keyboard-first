@@ -1,27 +1,41 @@
 import { createRegistry } from './tweet-registry';
 import { createRouteWatcher } from './route-watcher';
 import { createNavigator } from './navigator';
+import { createTabSwitcher } from './tab-switcher';
 import { attachKeyBindings } from './key-bindings';
 import { createHelpOverlay } from './help-overlay';
+import { createHintButton } from './hint-button';
+import { createMediaModal } from './media-modal';
+import { createLinkMode } from './link-mode';
 
 function main() {
   const registry = createRegistry();
   const router = createRouteWatcher();
   const nav = createNavigator({ registry, router });
+  const tabs = createTabSwitcher({});
   const help = createHelpOverlay();
+  const hint = createHintButton({ onClick: () => help.toggle() });
+  const mediaModal = createMediaModal();
+  const linkMode = createLinkMode({ nav, registry, router, mediaModal });
 
   const detach = attachKeyBindings({
     nav,
+    switchTab: (i) => tabs.switchTo(i),
     toggleHelp: () => help.toggle(),
     helpOpen: () => help.isOpen(),
+    mediaModal,
+    linkMode,
   });
 
   window.addEventListener(
     'pagehide',
     () => {
       detach();
+      linkMode.stop();
+      mediaModal.stop();
       nav.stop();
       help.stop();
+      hint.stop();
       registry.stop();
       router.stop();
     },

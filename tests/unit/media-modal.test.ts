@@ -89,4 +89,65 @@ describe('createMediaModal', () => {
 
     expect(Array.from(source.children)).toEqual([before, video, after]);
   });
+
+  function itemsFor(n: number) {
+    return Array.from({ length: n }, (_, i) => ({
+      kind: 'image' as const,
+      src: `https://pbs.twimg.com/media/I${i}?format=jpg&name=small`,
+    }));
+  }
+
+  it('handleKey ArrowRight advances, ArrowLeft goes back; both clamp at bounds', () => {
+    modal = createMediaModal();
+    modal.open(itemsFor(3), 0);
+    modal.handleKey(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
+    modal.handleKey(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
+    modal.handleKey(new KeyboardEvent('keydown', { key: 'ArrowRight' })); // clamped
+    const host = document.querySelector('[data-xkbd-media]') as HTMLElement;
+    const img = host.shadowRoot!.querySelector('img') as HTMLImageElement;
+    expect(img.src).toContain('I2');
+    modal.handleKey(new KeyboardEvent('keydown', { key: 'ArrowLeft' }));
+    modal.handleKey(new KeyboardEvent('keydown', { key: 'ArrowLeft' }));
+    modal.handleKey(new KeyboardEvent('keydown', { key: 'ArrowLeft' })); // clamped
+    const img2 = host.shadowRoot!.querySelector('img') as HTMLImageElement;
+    expect(img2.src).toContain('I0');
+  });
+
+  it('handleKey digit jumps to that index; out-of-range digit is ignored', () => {
+    modal = createMediaModal();
+    modal.open(itemsFor(3), 0);
+    modal.handleKey(new KeyboardEvent('keydown', { key: '3' }));
+    const host = document.querySelector('[data-xkbd-media]') as HTMLElement;
+    const img = host.shadowRoot!.querySelector('img') as HTMLImageElement;
+    expect(img.src).toContain('I2');
+    modal.handleKey(new KeyboardEvent('keydown', { key: '9' }));
+    const img2 = host.shadowRoot!.querySelector('img') as HTMLImageElement;
+    expect(img2.src).toContain('I2');
+  });
+
+  it('carousel chrome (counter, thumbs) is hidden for single-item', () => {
+    modal = createMediaModal();
+    modal.open(itemsFor(1), 0);
+    const host = document.querySelector('[data-xkbd-media]') as HTMLElement;
+    expect(host.shadowRoot!.querySelector('.thumbs')).toBeNull();
+    expect(host.shadowRoot!.querySelector('.counter')).toBeNull();
+  });
+
+  it('carousel chrome shown for multi-item; counter reflects index', () => {
+    modal = createMediaModal();
+    modal.open(itemsFor(4), 2);
+    const host = document.querySelector('[data-xkbd-media]') as HTMLElement;
+    const counter = host.shadowRoot!.querySelector('.counter');
+    expect(counter?.textContent).toBe('3 / 4');
+    const thumbs = host.shadowRoot!.querySelectorAll('.thumb');
+    expect(thumbs.length).toBe(4);
+    expect(thumbs[2].classList.contains('is-current')).toBe(true);
+  });
+
+  it('handleKey Escape closes the modal', () => {
+    modal = createMediaModal();
+    modal.open(itemsFor(1), 0);
+    modal.handleKey(new KeyboardEvent('keydown', { key: 'Escape' }));
+    expect(modal.isOpen()).toBe(false);
+  });
 });

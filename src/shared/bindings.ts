@@ -1,0 +1,16 @@
+export const BINDINGS: ReadonlyArray<readonly [string, string]> = [
+  ['↓ / j', 'Next tweet'],
+  ['↑ / k', 'Previous tweet'],
+  ['→', 'Open thread'],
+  ['← / Esc', 'Back'],
+  ['Home / gg', 'First tweet'],
+  ['End / G', 'Last tweet'],
+  ['Space', 'Expand truncated post (Mostrar mais / Show more)'],
+  ['Space', 'Page down (when focused post is not truncated)'],
+  ['⇧Space', 'Page up'],
+  ['t', 'Translate focused post'],
+  ['r', 'Reload page'],
+  ['.', 'Load new posts ("Mostrar N posts")'],
+  ['1 / 2', 'For You / Following (Home)'],
+  ['?', 'Toggle help'],
+];

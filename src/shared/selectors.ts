@@ -5,6 +5,28 @@ export const SELECTORS = {
     'a[href*="/status/"][role="link"]:has(time)',
     'a[href*="/status/"]',
   ],
+  TABLIST: [
+    '[data-testid="primaryColumn"] div[role="tablist"]',
+    'div[role="tablist"]',
+  ],
+  TAB: ['[role="tab"]'],
+  SHOW_MORE: [
+    '[data-testid="tweet-text-show-more-link"]',
+    '[data-testid="tweet-text-show-less-link"]',
+    '[data-testid^="tweet-text-show-"]',
+    '[data-testid*="show-more"]',
+    '[data-testid*="show-less"]',
+  ],
+  TRANSLATE: [
+    '[data-testid="tweet-text-show-translation-button"]',
+    '[data-testid="translateTweet-button"]',
+    '[data-testid^="tweet-text-show-translation"]',
+    '[data-testid*="translate"]',
+  ],
+  NEW_POSTS_PILL: [
+    '[data-testid="pillLabel"]',
+    'button[aria-label*="post" i]',
+  ],
 } as const;
 
 export function queryFirst(

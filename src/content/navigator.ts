@@ -13,6 +13,18 @@ export type Command =
   | 'pageUp';
 
 const ACTIVE_ATTR = 'data-xkbd-active';
+const THREAD_GAP_PX = 16;
+
+function findGroupTop(entries: TweetEntry[], idx: number): TweetEntry {
+  let i = idx;
+  while (i > 0) {
+    const prev = entries[i - 1].article.getBoundingClientRect();
+    const cur = entries[i].article.getBoundingClientRect();
+    if (cur.top - prev.bottom > THREAD_GAP_PX) break;
+    i--;
+  }
+  return entries[i];
+}
 
 export interface Navigator {
   dispatch(cmd: Command): void;
@@ -76,7 +88,11 @@ export function createNavigator(deps: NavigatorDeps): Navigator {
     const entry = registry.findById(activeId);
     if (!entry) return;
     entry.article.focus({ preventScroll: true });
-    const rect = entry.article.getBoundingClientRect();
+    const list = registry.current();
+    const idx = list.findIndex((e) => e.id === activeId);
+    if (idx < 0) return;
+    const groupTop = findGroupTop(list, idx);
+    const rect = groupTop.article.getBoundingClientRect();
     const targetTop = topObstructionHeight() + SCROLL_PAD;
     window.scrollBy({ top: rect.top - targetTop, behavior: 'auto' });
   };

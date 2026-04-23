@@ -271,4 +271,52 @@ describe('createNavigator', () => {
     expect(scrollBy).toHaveBeenCalledWith({ top: 692, behavior: 'auto' });
     nav.stop();
   });
+
+  it('within a thread group, navigating keeps scroll anchored at the group top', () => {
+    const entries = buildEntries(['a', 'b', 'c']);
+    // a, b, c are flush (gap = 5px ≤ THREAD_GAP_PX)
+    mockRect(entries[0].article, 500, 100); // bottom = 600
+    mockRect(entries[1].article, 605, 100); // gap 5
+    mockRect(entries[2].article, 710, 100); // gap 5
+
+    const scrollBy = vi.fn();
+    window.scrollBy = scrollBy as unknown as typeof window.scrollBy;
+
+    const nav = createNavigator({
+      registry: makeRegistry(entries),
+      router: makeRouter(),
+      openLink: vi.fn(),
+      goBack: vi.fn(),
+    });
+    nav.dispatch('next'); // a → b; group top still 'a' (500)
+    nav.dispatch('next'); // b → c; group top still 'a' (500)
+    // Both moveTo calls scroll to the same target: 500 - 8 = 492
+    expect(scrollBy).toHaveBeenNthCalledWith(1, { top: 492, behavior: 'auto' });
+    expect(scrollBy).toHaveBeenNthCalledWith(2, { top: 492, behavior: 'auto' });
+    nav.stop();
+  });
+
+  it('crossing out of a thread group re-pins to the new group top', () => {
+    const entries = buildEntries(['a', 'b', 'c', 'd']);
+    // a, b, c form one group; d is its own (large gap before)
+    mockRect(entries[0].article, 500, 100);  // bottom 600
+    mockRect(entries[1].article, 605, 100);  // gap 5 → grouped
+    mockRect(entries[2].article, 710, 100);  // gap 5 → grouped, bottom 810
+    mockRect(entries[3].article, 920, 100);  // gap 110 → separate
+
+    const scrollBy = vi.fn();
+    window.scrollBy = scrollBy as unknown as typeof window.scrollBy;
+
+    const nav = createNavigator({
+      registry: makeRegistry(entries),
+      router: makeRouter(),
+      openLink: vi.fn(),
+      goBack: vi.fn(),
+    });
+    nav.dispatch('next'); // a → b (pin @ 500)
+    nav.dispatch('next'); // b → c (pin @ 500)
+    nav.dispatch('next'); // c → d (pin @ 920)
+    expect(scrollBy).toHaveBeenNthCalledWith(3, { top: 912, behavior: 'auto' });
+    nav.stop();
+  });
 });

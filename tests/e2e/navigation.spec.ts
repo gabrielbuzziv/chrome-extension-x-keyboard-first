@@ -17,7 +17,9 @@ test.beforeAll(async () => {
       ? 'x-timeline.html'
       : req.url === '/thread'
         ? 'x-thread.html'
-        : null;
+        : req.url === '/truncated'
+          ? 'x-timeline-truncated.html'
+          : null;
     if (!name) { res.statusCode = 404; return res.end('nope'); }
     res.setHeader('content-type', 'text/html');
     res.end(readFileSync(resolve(fixturesDir, name)));
@@ -85,5 +87,32 @@ test('? opens the help overlay', async () => {
   await page.keyboard.press('?'); // opens help overlay
   const dialog = page.locator('div[data-xkbd-help]').first();
   await expect(dialog).toBeAttached();
+  await ctx.close();
+});
+
+test('Space expands a truncated post and does not page down', async () => {
+  const userDataDir = resolve(__dirname, '.pw-profile-truncated');
+  const ctx = await chromium.launchPersistentContext(userDataDir, {
+    headless: false,
+    viewport: { width: 1280, height: 600 },
+    args: [
+      `--disable-extensions-except=${distDir}`,
+      `--load-extension=${distDir}`,
+    ],
+  });
+  const page = await ctx.newPage();
+  await page.goto(`http://127.0.0.1:${port}/truncated`);
+  await page.waitForSelector('article[data-testid="tweet"]');
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('ArrowUp');
+  await expect(
+    page.locator('article[data-xkbd-active="true"] a[href*="/status/"]'),
+  ).toHaveAttribute('href', '/user/status/111');
+  const y1 = await page.evaluate(() => window.scrollY);
+  await page.keyboard.press(' ');
+  const y2 = await page.evaluate(() => window.scrollY);
+  expect(y2).toBe(y1);
+  const clicks = await page.evaluate(() => (window as any).__expandClicked ?? 0);
+  expect(clicks).toBe(1);
   await ctx.close();
 });

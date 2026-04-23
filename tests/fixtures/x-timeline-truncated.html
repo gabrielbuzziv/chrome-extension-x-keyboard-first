@@ -1,0 +1,28 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>truncated fixture</title></head>
+<body>
+<main>
+  <div aria-label="Timeline: Home">
+    <div data-testid="cellInnerDiv">
+      <article data-testid="tweet" tabindex="0">
+        <a role="link" href="/user/status/111"><time>1</time></a>
+        <div data-testid="tweetText">Welcome — expect practical demos and more…</div>
+        <button data-testid="tweet-text-show-more-link" id="expand">Mostrar mais</button>
+      </article>
+    </div>
+    <div data-testid="cellInnerDiv">
+      <article data-testid="tweet" tabindex="0">
+        <a role="link" href="/user/status/222"><time>2</time></a>
+        <div data-testid="tweetText">Second tweet</div>
+      </article>
+    </div>
+  </div>
+</main>
+<script>
+  document.getElementById('expand').addEventListener('click', () => {
+    window.__expandClicked = (window.__expandClicked ?? 0) + 1;
+  });
+</script>
+</body>
+</html>

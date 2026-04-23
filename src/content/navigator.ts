@@ -162,11 +162,19 @@ export function createNavigator(deps: NavigatorDeps): Navigator {
           if (idx > 0) moveTo(entries[idx - 1].id);
           break;
         case 'first':
-          moveTo(entries[0].id);
+        case 'last': {
+          const toBottom = cmd === 'last';
+          window.scrollTo({
+            top: toBottom ? document.documentElement.scrollHeight : 0,
+            behavior: 'auto',
+          });
+          requestAnimationFrame(() => {
+            const list = registry.current();
+            if (list.length === 0) return;
+            moveTo((toBottom ? list[list.length - 1] : list[0]).id);
+          });
           break;
-        case 'last':
-          moveTo(entries[entries.length - 1].id);
-          break;
+        }
         case 'enter': {
           if (!activeId) return;
           const entry = registry.findById(activeId);

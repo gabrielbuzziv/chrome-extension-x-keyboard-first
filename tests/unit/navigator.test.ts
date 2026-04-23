@@ -99,7 +99,7 @@ describe('createNavigator', () => {
     nav.stop();
   });
 
-  it('first/last go to boundaries', () => {
+  it('first/last go to boundaries', async () => {
     const entries = buildEntries(['a', 'b', 'c']);
     const nav = createNavigator({
       registry: makeRegistry(entries),
@@ -108,8 +108,10 @@ describe('createNavigator', () => {
       goBack: vi.fn(),
     });
     nav.dispatch('last');
+    await new Promise((r) => requestAnimationFrame(() => r(null)));
     expect(entries[2].article.getAttribute('data-xkbd-active')).toBe('true');
     nav.dispatch('first');
+    await new Promise((r) => requestAnimationFrame(() => r(null)));
     expect(entries[0].article.getAttribute('data-xkbd-active')).toBe('true');
     nav.stop();
   });
@@ -317,6 +319,55 @@ describe('createNavigator', () => {
     nav.dispatch('next'); // b → c (pin @ 500)
     nav.dispatch('next'); // c → d (pin @ 920)
     expect(scrollBy).toHaveBeenNthCalledWith(3, { top: 912, behavior: 'auto' });
+    nav.stop();
+  });
+
+  it('first scrolls window to top and pins registry[0] after a frame', async () => {
+    const entries = buildEntries(['a', 'b', 'c']);
+    mockRect(entries[0].article, 0, 100);
+    mockRect(entries[1].article, 200, 100);
+    mockRect(entries[2].article, 400, 100);
+
+    const scrollTo = vi.fn();
+    window.scrollTo = scrollTo as unknown as typeof window.scrollTo;
+
+    const nav = createNavigator({
+      registry: makeRegistry(entries),
+      router: makeRouter(),
+      openLink: vi.fn(),
+      goBack: vi.fn(),
+    });
+    nav.dispatch('next'); // active now 'b' (sanity)
+    nav.dispatch('first');
+    expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'auto' });
+    await new Promise((r) => requestAnimationFrame(() => r(null)));
+    expect(entries[0].article.getAttribute('data-xkbd-active')).toBe('true');
+    nav.stop();
+  });
+
+  it('last scrolls window to scrollHeight and pins last entry after a frame', async () => {
+    const entries = buildEntries(['a', 'b', 'c']);
+    mockRect(entries[0].article, 0, 100);
+    mockRect(entries[1].article, 200, 100);
+    mockRect(entries[2].article, 400, 100);
+
+    Object.defineProperty(document.documentElement, 'scrollHeight', {
+      configurable: true,
+      value: 9999,
+    });
+    const scrollTo = vi.fn();
+    window.scrollTo = scrollTo as unknown as typeof window.scrollTo;
+
+    const nav = createNavigator({
+      registry: makeRegistry(entries),
+      router: makeRouter(),
+      openLink: vi.fn(),
+      goBack: vi.fn(),
+    });
+    nav.dispatch('last');
+    expect(scrollTo).toHaveBeenCalledWith({ top: 9999, behavior: 'auto' });
+    await new Promise((r) => requestAnimationFrame(() => r(null)));
+    expect(entries[2].article.getAttribute('data-xkbd-active')).toBe('true');
     nav.stop();
   });
 });

@@ -1,5 +1,6 @@
 export const SELECTORS = {
   TWEET: ['article[data-testid="tweet"]', 'article[role="article"]'],
+  TWEET_TEXT: ['[data-testid="tweetText"]'],
   FEED: ['[aria-label^="Timeline"]', '[data-testid="primaryColumn"]'],
   PERMALINK_IN_TWEET: [
     'a[href*="/status/"][role="link"]:has(time)',

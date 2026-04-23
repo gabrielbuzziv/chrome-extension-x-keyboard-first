@@ -198,6 +198,39 @@ describe('attachKeyBindings', () => {
     expect(click).toHaveBeenCalledTimes(1);
   });
 
+  it('Space does NOT click show-more inside a nested quoted tweet', () => {
+    const d = makeDeps();
+    const article = document.createElement('article');
+    article.setAttribute('data-testid', 'tweet');
+
+    // Outer tweet text is plain (no show-more).
+    const outerText = document.createElement('div');
+    outerText.setAttribute('data-testid', 'tweetText');
+    outerText.textContent = 'outer post body';
+    article.appendChild(outerText);
+
+    // Nested quoted tweet has a show-more button.
+    const quoted = document.createElement('article');
+    quoted.setAttribute('data-testid', 'tweet');
+    const innerText = document.createElement('div');
+    innerText.setAttribute('data-testid', 'tweetText');
+    quoted.appendChild(innerText);
+    const innerBtn = document.createElement('button');
+    innerBtn.setAttribute('data-testid', 'tweet-text-show-more-link');
+    const click = vi.fn();
+    innerBtn.addEventListener('click', click);
+    quoted.appendChild(innerBtn);
+    article.appendChild(quoted);
+
+    document.body.appendChild(article);
+    d.setActive(article);
+    detach = attachKeyBindings(d.bindings);
+
+    fireKey({ key: ' ', code: 'Space' });
+    expect(click).not.toHaveBeenCalled();
+    expect(d.dispatch).toHaveBeenCalledWith('pageDown');
+  });
+
   it('t clicks translate via text fallback ("Mostrar tradução")', () => {
     const d = makeDeps();
     const article = document.createElement('article');

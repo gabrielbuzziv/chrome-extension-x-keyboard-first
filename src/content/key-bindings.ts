@@ -90,10 +90,20 @@ function findByText(
 }
 
 function findShowMore(article: HTMLElement): HTMLElement | null {
-  return (
-    (queryFirst(SELECTORS.SHOW_MORE, article) as HTMLElement | null) ??
-    findByText(article, SHOW_MORE_TEXTS)
-  );
+  // Restrict the search to the outer tweet's text area so a show-more inside
+  // a quoted sub-tweet does not hijack the Space press.
+  const outerText = queryFirst(SELECTORS.TWEET_TEXT, article) as HTMLElement | null;
+  const scope: HTMLElement = outerText?.parentElement ?? article;
+  const direct = queryFirst(SELECTORS.SHOW_MORE, scope) as HTMLElement | null;
+  if (direct && !isInsideNestedTweet(direct, article)) return direct;
+  const byText = findByText(scope, SHOW_MORE_TEXTS);
+  if (byText && !isInsideNestedTweet(byText, article)) return byText;
+  return null;
+}
+
+function isInsideNestedTweet(el: HTMLElement, article: HTMLElement): boolean {
+  const nested = el.closest('article[data-testid="tweet"]');
+  return nested != null && nested !== article;
 }
 
 function findTranslate(article: HTMLElement): HTMLElement | null {

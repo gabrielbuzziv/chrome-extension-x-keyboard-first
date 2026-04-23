@@ -51,6 +51,21 @@ function buildEntries(ids: string[]): TweetEntry[] {
   return ids.map((id) => ({ id, article: makeArticle(id), top: 0 }));
 }
 
+function mockRect(article: HTMLElement, top: number, height: number): void {
+  article.getBoundingClientRect = () =>
+    ({
+      top,
+      bottom: top + height,
+      left: 0,
+      right: 800,
+      width: 800,
+      height,
+      x: 0,
+      y: top,
+      toJSON: () => ({}),
+    }) as DOMRect;
+}
+
 describe('createNavigator', () => {
   beforeEach(() => { document.body.innerHTML = ''; });
 
@@ -59,7 +74,7 @@ describe('createNavigator', () => {
     const nav = createNavigator({
       registry: makeRegistry(entries),
       router: makeRouter(),
-      navigate: vi.fn(),
+      openLink: vi.fn(),
       goBack: vi.fn(),
     });
     nav.dispatch('next');
@@ -74,7 +89,7 @@ describe('createNavigator', () => {
     const nav = createNavigator({
       registry: makeRegistry(entries),
       router: makeRouter(),
-      navigate: vi.fn(),
+      openLink: vi.fn(),
       goBack: vi.fn(),
     });
     nav.dispatch('next'); // a -> b
@@ -89,7 +104,7 @@ describe('createNavigator', () => {
     const nav = createNavigator({
       registry: makeRegistry(entries),
       router: makeRouter(),
-      navigate: vi.fn(),
+      openLink: vi.fn(),
       goBack: vi.fn(),
     });
     nav.dispatch('last');
@@ -99,19 +114,20 @@ describe('createNavigator', () => {
     nav.stop();
   });
 
-  it('enter calls navigate with the permalink href', () => {
+  it('enter clicks the permalink anchor (so X SPA router handles nav)', () => {
     const entries = buildEntries(['77']);
-    const navigate = vi.fn();
+    const openLink = vi.fn();
     const nav = createNavigator({
       registry: makeRegistry(entries),
       router: makeRouter('timeline'),
-      navigate,
+      openLink,
       goBack: vi.fn(),
     });
     nav.dispatch('next'); // activates '77'
     nav.dispatch('enter');
-    expect(navigate).toHaveBeenCalledTimes(1);
-    expect(navigate.mock.calls[0][0]).toContain('/user/status/77');
+    expect(openLink).toHaveBeenCalledTimes(1);
+    const link = openLink.mock.calls[0][0] as HTMLAnchorElement;
+    expect(link.getAttribute('href')).toContain('/user/status/77');
     nav.stop();
   });
 
@@ -121,7 +137,7 @@ describe('createNavigator', () => {
     const nav = createNavigator({
       registry: makeRegistry(entries),
       router: makeRouter(),
-      navigate: vi.fn(),
+      openLink: vi.fn(),
       goBack,
     });
     nav.dispatch('back');
@@ -134,7 +150,7 @@ describe('createNavigator', () => {
     const registry = makeRegistry(entries);
     const router = makeRouter('timeline');
     const nav = createNavigator({
-      registry, router, navigate: vi.fn(), goBack: vi.fn(),
+      registry, router, openLink: vi.fn(), goBack: vi.fn(),
     });
     nav.dispatch('next'); nav.dispatch('next'); // active is now 'c'
     nav.dispatch('enter'); // saves lastTimelineActiveId = 'c'
@@ -149,7 +165,7 @@ describe('createNavigator', () => {
     const entries = buildEntries(['a', 'b']);
     const registry = makeRegistry(entries);
     const nav = createNavigator({
-      registry, router: makeRouter(), navigate: vi.fn(), goBack: vi.fn(),
+      registry, router: makeRouter(), openLink: vi.fn(), goBack: vi.fn(),
     });
     nav.dispatch('next'); nav.dispatch('next'); // activate 'b'
     entries[1].article.remove();
@@ -165,7 +181,7 @@ describe('createNavigator', () => {
     const registry = makeRegistry(entries);
     const router = makeRouter('timeline');
     const nav = createNavigator({
-      registry, router, navigate: vi.fn(), goBack: vi.fn(),
+      registry, router, openLink: vi.fn(), goBack: vi.fn(),
     });
     nav.dispatch('next'); // active 'b'
     nav.dispatch('enter'); // saves 'b'
@@ -188,12 +204,36 @@ describe('createNavigator', () => {
     nav.stop();
   });
 
+  it('activeArticle returns the currently active article element', () => {
+    const entries = buildEntries(['a', 'b', 'c']);
+    const nav = createNavigator({
+      registry: makeRegistry(entries),
+      router: makeRouter(),
+      openLink: vi.fn(),
+      goBack: vi.fn(),
+    });
+    nav.dispatch('next'); // activates 'b'
+    expect(nav.activeArticle()).toBe(entries[1].article);
+    nav.stop();
+  });
+
+  it('activeArticle returns null when registry is empty', () => {
+    const nav = createNavigator({
+      registry: makeRegistry([]),
+      router: makeRouter(),
+      openLink: vi.fn(),
+      goBack: vi.fn(),
+    });
+    expect(nav.activeArticle()).toBeNull();
+    nav.stop();
+  });
+
   it('stop cancels a pending restore subscription', () => {
     const entries = buildEntries(['a', 'b']);
     const registry = makeRegistry(entries);
     const router = makeRouter('timeline');
     const nav = createNavigator({
-      registry, router, navigate: vi.fn(), goBack: vi.fn(),
+      registry, router, openLink: vi.fn(), goBack: vi.fn(),
     });
     nav.dispatch('next'); // 'b'
     nav.dispatch('enter'); // saves 'b'
@@ -208,5 +248,27 @@ describe('createNavigator', () => {
     entries.splice(1, 0, { id: 'b', article: newB, top: 0 });
     registry.fire();
     expect(newB.getAttribute('data-xkbd-active')).toBeNull();
+  });
+
+  it('dispatching next unconditionally scrolls active article to headerBottom + SCROLL_PAD', () => {
+    const entries = buildEntries(['a', 'b', 'c']);
+    // Large gaps — no thread grouping
+    mockRect(entries[0].article, 500, 100);
+    mockRect(entries[1].article, 700, 100);
+    mockRect(entries[2].article, 900, 100);
+
+    const scrollBy = vi.fn();
+    window.scrollBy = scrollBy as unknown as typeof window.scrollBy;
+
+    const nav = createNavigator({
+      registry: makeRegistry(entries),
+      router: makeRouter(),
+      openLink: vi.fn(),
+      goBack: vi.fn(),
+    });
+    nav.dispatch('next'); // a → b
+    // SCROLL_PAD = 8; headerBottom = 0 in jsdom; expected scroll = 700 - 8 = 692
+    expect(scrollBy).toHaveBeenCalledWith({ top: 692, behavior: 'auto' });
+    nav.stop();
   });
 });

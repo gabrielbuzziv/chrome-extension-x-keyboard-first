@@ -16,19 +16,20 @@ const ACTIVE_ATTR = 'data-xkbd-active';
 
 export interface Navigator {
   dispatch(cmd: Command): void;
+  activeArticle(): HTMLElement | null;
   stop(): void;
 }
 
 export interface NavigatorDeps {
   registry: Registry;
   router: RouteWatcher;
-  navigate?: (url: string) => void;
+  openLink?: (link: HTMLAnchorElement) => void;
   goBack?: () => void;
 }
 
 export function createNavigator(deps: NavigatorDeps): Navigator {
   const { registry, router } = deps;
-  const navigate = deps.navigate ?? ((url: string) => location.assign(url));
+  const openLink = deps.openLink ?? ((link: HTMLAnchorElement) => link.click());
   const goBack = deps.goBack ?? (() => history.back());
 
   let activeId: string | null = null;
@@ -53,12 +54,31 @@ export function createNavigator(deps: NavigatorDeps): Navigator {
     if (entry) entry.article.setAttribute(ACTIVE_ATTR, 'true');
   };
 
+  const SCROLL_PAD = 8;
+
+  const topObstructionHeight = (): number => {
+    if (typeof document.elementFromPoint !== 'function') return 0;
+    const x = Math.max(1, Math.floor(window.innerWidth / 2));
+    let node: Element | null = document.elementFromPoint(x, 1);
+    while (node && node !== document.body) {
+      const cs = getComputedStyle(node as HTMLElement);
+      const top = parseFloat(cs.top || '0');
+      if ((cs.position === 'sticky' || cs.position === 'fixed') && top <= 0) {
+        return (node as HTMLElement).getBoundingClientRect().bottom;
+      }
+      node = node.parentElement;
+    }
+    return 0;
+  };
+
   const focusAndScroll = () => {
     if (!activeId) return;
     const entry = registry.findById(activeId);
     if (!entry) return;
     entry.article.focus({ preventScroll: true });
-    entry.article.scrollIntoView?.({ block: 'nearest' });
+    const rect = entry.article.getBoundingClientRect();
+    const targetTop = topObstructionHeight() + SCROLL_PAD;
+    window.scrollBy({ top: rect.top - targetTop, behavior: 'auto' });
   };
 
   const ensureActive = (): TweetEntry | undefined => {
@@ -107,6 +127,10 @@ export function createNavigator(deps: NavigatorDeps): Navigator {
   });
 
   return {
+    activeArticle() {
+      const cur = ensureActive();
+      return cur ? cur.article : null;
+    },
     dispatch(cmd) {
       const entries = registry.current();
       if (entries.length === 0) return;
@@ -137,7 +161,7 @@ export function createNavigator(deps: NavigatorDeps): Navigator {
           ) as HTMLAnchorElement | null;
           if (!link) return;
           if (router.mode() === 'timeline') lastTimelineActiveId = activeId;
-          navigate(link.href);
+          openLink(link);
           break;
         }
         case 'back':

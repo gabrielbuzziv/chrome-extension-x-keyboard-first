@@ -209,7 +209,7 @@ if (linkMode.isActive()) {
 ### Files touched
 
 - `src/shared/selectors.ts` — add `OPENABLES`, `TWEET_TEXT`.
-- `src/shared/bindings.ts` — new row `['o', 'Open link (1..9 chooses target)']`.
+- `src/shared/bindings.ts` — new row `['o → 1..9', 'Open link / media in active post']`.
 - `src/content/link-mode.ts` — new module. Exposes:
   ```ts
   export interface LinkMode {
@@ -366,7 +366,7 @@ We don't paint expand buttons for images. Images already open on click in X's ow
 ### Files touched
 
 - `src/shared/selectors.ts` — add `VIDEO`, `IMAGE` (beyond the `OPENABLES` entries), `CARD`, `QUOTED_TWEET`, `BODY_URL`.
-- `src/shared/bindings.ts` — add `['o → 1..9', 'Open link / media in active post']`. (No separate binding for the expand button — it's a mouse path.)
+- `src/shared/bindings.ts` — no additional row here; the `o → 1..9` row from Feature 2 covers the keyboard path into the modal. The expand button on videos is a mouse-only affordance.
 - `src/content/media-modal.ts` — new module per API above.
 - `src/content/media-expand-button.ts` — new module.
 - `src/content/index.ts` — wire modal + expand-button modules, pass modal into `linkMode`.

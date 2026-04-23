@@ -19,7 +19,9 @@ test.beforeAll(async () => {
         ? 'x-thread.html'
         : req.url === '/truncated'
           ? 'x-timeline-truncated.html'
-          : null;
+          : req.url === '/media'
+            ? 'x-timeline-media.html'
+            : null;
     if (!name) { res.statusCode = 404; return res.end('nope'); }
     res.setHeader('content-type', 'text/html');
     res.end(readFileSync(resolve(fixturesDir, name)));
@@ -114,5 +116,32 @@ test('Space expands a truncated post and does not page down', async () => {
   expect(y2).toBe(y1);
   const clicks = await page.evaluate(() => (window as any).__expandClicked ?? 0);
   expect(clicks).toBe(1);
+  await ctx.close();
+});
+
+test('o then digit opens media modal; Escape closes it', async () => {
+  const userDataDir = resolve(__dirname, '.pw-profile-media');
+  const ctx = await chromium.launchPersistentContext(userDataDir, {
+    headless: false,
+    viewport: { width: 1280, height: 800 },
+    args: [
+      `--disable-extensions-except=${distDir}`,
+      `--load-extension=${distDir}`,
+    ],
+  });
+  const page = await ctx.newPage();
+  await page.goto(`http://127.0.0.1:${port}/media`);
+  await page.waitForSelector('article[data-testid="tweet"]');
+  // Activate the article. The fixture has a single tweet — ArrowDown activates it
+  // (ensureActive sets active to nearest, then 'next' advances. Since there's only
+  // one tweet, 'next' is a no-op and activeId stays on the single tweet.)
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('o');
+  // Badges now painted; first image is 1 (no body URLs enumerated).
+  await page.keyboard.press('1');
+  await expect(page.locator('[data-xkbd-media]')).toHaveCount(1);
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('[data-xkbd-media]')).toHaveCount(0);
   await ctx.close();
 });

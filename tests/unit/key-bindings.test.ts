@@ -198,6 +198,34 @@ describe('attachKeyBindings', () => {
     expect(click).toHaveBeenCalledTimes(1);
   });
 
+  it('Space clicks show-more on the focused article even when nav.activeArticle returns a different one', () => {
+    const d = makeDeps();
+
+    // nav.activeArticle returns a different, non-truncated article.
+    const navActive = document.createElement('article');
+    navActive.setAttribute('data-testid', 'tweet');
+    document.body.appendChild(navActive);
+    d.setActive(navActive);
+
+    // A second article has the show-more and is actually focused.
+    const focused = document.createElement('article');
+    focused.setAttribute('data-testid', 'tweet');
+    focused.tabIndex = 0;
+    const btn = document.createElement('button');
+    btn.setAttribute('data-testid', 'tweet-text-show-more-link');
+    const click = vi.fn();
+    btn.addEventListener('click', click);
+    focused.appendChild(btn);
+    document.body.appendChild(focused);
+    focused.focus();
+
+    detach = attachKeyBindings(d.bindings);
+    fireKey({ key: ' ', code: 'Space' });
+
+    expect(click).toHaveBeenCalledTimes(1);
+    expect(d.dispatch).not.toHaveBeenCalled();
+  });
+
   it('Space does NOT click show-more inside a nested quoted tweet', () => {
     const d = makeDeps();
     const article = document.createElement('article');

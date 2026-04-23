@@ -153,7 +153,11 @@ export function attachKeyBindings(deps: KeyBindingsDeps): () => void {
 
     if (e.code === 'Space') {
       if (!e.shiftKey) {
-        const article = deps.nav.activeArticle();
+        const focusedArticle =
+          (document.activeElement as HTMLElement | null)?.closest(
+            'article[data-testid="tweet"]',
+          ) as HTMLElement | null;
+        const article = focusedArticle ?? deps.nav.activeArticle();
         if (article && findShowMore(article)) {
           return { kind: 'click', target: 'showMore' };
         }
@@ -238,7 +242,11 @@ export function attachKeyBindings(deps: KeyBindingsDeps): () => void {
           findNewPostsPill(document)?.click();
           break;
         }
-        const article = deps.nav.activeArticle();
+        const focusedArticle =
+          (document.activeElement as HTMLElement | null)?.closest(
+            'article[data-testid="tweet"]',
+          ) as HTMLElement | null;
+        const article = focusedArticle ?? deps.nav.activeArticle();
         if (!article) break;
         const btn =
           action.target === 'showMore'

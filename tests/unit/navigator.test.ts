@@ -162,20 +162,17 @@ describe('createNavigator', () => {
     const entries = buildEntries(['a']);
     const router = makeRouter('timeline');
     const goBack = vi.fn();
-    const navigateHome = vi.fn();
     const nav = createNavigator({
       registry: makeRegistry(entries),
       router,
       openLink: vi.fn(),
       goBack,
-      navigateHome,
     });
     nav.dispatch('next');
     nav.dispatch('enter');
     router._setMode('thread');
     nav.dispatch('back');
     expect(goBack).toHaveBeenCalled();
-    expect(navigateHome).not.toHaveBeenCalled();
     nav.stop();
   });
 
@@ -184,13 +181,11 @@ describe('createNavigator', () => {
     const registry = makeRegistry(entries);
     const router = makeRouter('timeline');
     const goBack = vi.fn();
-    const navigateHome = vi.fn();
     const nav = createNavigator({
       registry,
       router,
       openLink: vi.fn(),
       goBack,
-      navigateHome,
     });
 
     nav.dispatch('next');
@@ -201,62 +196,36 @@ describe('createNavigator', () => {
     nav.dispatch('back');
 
     expect(goBack).toHaveBeenCalledTimes(1);
-    expect(navigateHome).not.toHaveBeenCalled();
     nav.stop();
   });
 
-  it('back falls back to home timeline when there is no local history', () => {
+  it('back calls goBack on a direct-entry thread page', () => {
     const entries = buildEntries(['a']);
     const goBack = vi.fn();
-    const navigateHome = vi.fn();
     const nav = createNavigator({
       registry: makeRegistry(entries),
       router: makeRouter('thread'),
       openLink: vi.fn(),
       goBack,
-      navigateHome,
     });
     nav.dispatch('back');
-    expect(goBack).not.toHaveBeenCalled();
-    expect(navigateHome).toHaveBeenCalled();
+    expect(goBack).toHaveBeenCalledTimes(1);
     nav.stop();
   });
 
   it('back does nothing on timeline', () => {
     const entries = buildEntries(['a']);
     const goBack = vi.fn();
-    const navigateHome = vi.fn();
     const nav = createNavigator({
       registry: makeRegistry(entries),
       router: makeRouter('timeline'),
       openLink: vi.fn(),
       goBack,
-      navigateHome,
     });
 
     nav.dispatch('back');
 
     expect(goBack).not.toHaveBeenCalled();
-    expect(navigateHome).not.toHaveBeenCalled();
-    nav.stop();
-  });
-
-  it('back on a direct-entry thread navigates to timeline without using history', () => {
-    const entries = buildEntries(['a']);
-    const goBack = vi.fn();
-    const navigateHome = vi.fn();
-    const nav = createNavigator({
-      registry: makeRegistry(entries),
-      router: makeRouter('thread'),
-      openLink: vi.fn(),
-      goBack,
-      navigateHome,
-    });
-
-    nav.dispatch('back');
-
-    expect(goBack).not.toHaveBeenCalled();
-    expect(navigateHome).toHaveBeenCalledTimes(1);
     nav.stop();
   });
 

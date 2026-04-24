@@ -26,15 +26,20 @@ export interface NavigatorDeps {
   router: RouteWatcher;
   openLink?: (link: HTMLAnchorElement) => void;
   goBack?: () => void;
+  navigateHome?: () => void;
 }
 
 export function createNavigator(deps: NavigatorDeps): Navigator {
   const { registry, router } = deps;
   const openLink = deps.openLink ?? ((link: HTMLAnchorElement) => link.click());
   const goBack = deps.goBack ?? (() => history.back());
+  const navigateHome = deps.navigateHome ?? (() => {
+    location.assign('/home');
+  });
 
   let activeId: string | null = null;
   let lastTimelineActiveId: string | null = null;
+  let lastTimelineUrl: string | null = null;
   let pendingRestoreOff: (() => void) | null = null;
 
   const cancelPendingRestore = () => {
@@ -189,12 +194,19 @@ export function createNavigator(deps: NavigatorDeps): Navigator {
             entry.article,
           ) as HTMLAnchorElement | null;
           if (!link) return;
-          if (router.mode() === 'timeline') lastTimelineActiveId = activeId;
+          if (router.mode() === 'timeline') {
+            lastTimelineActiveId = activeId;
+            lastTimelineUrl = location.href;
+          }
           openLink(link);
           break;
         }
         case 'back':
-          goBack();
+          if (router.mode() === 'thread' && lastTimelineUrl) {
+            goBack();
+            break;
+          }
+          navigateHome();
           break;
         case 'pageDown':
         case 'pageUp': {

@@ -13,5 +13,7 @@ export const BINDINGS: ReadonlyArray<readonly [string, string]> = [
   ['r', 'Reload page'],
   ['.', 'Load new posts ("Mostrar N posts")'],
   ['1 / 2', 'For You / Following (Home)'],
+  ['h', 'Go to Home'],
+  ['e', 'Go to Explorer and focus search'],
   ['?', 'Toggle help'],
 ];

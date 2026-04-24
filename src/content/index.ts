@@ -8,6 +8,7 @@ import { createHintButton } from './hint-button';
 import { createMediaModal } from './media-modal';
 import { createLinkMode } from './link-mode';
 import { createMediaExpandButton } from './media-expand-button';
+import { createAppShortcuts } from './app-shortcuts';
 import { isSupportedXHost } from '../shared/host';
 
 function main() {
@@ -20,10 +21,13 @@ function main() {
   const mediaModal = createMediaModal();
   const linkMode = createLinkMode({ nav, registry, router, mediaModal });
   const expandBtn = createMediaExpandButton({ nav, registry, mediaModal });
+  const appShortcuts = createAppShortcuts();
 
   const detach = attachKeyBindings({
     nav,
     switchTab: (i) => tabs.switchTo(i),
+    goHome: () => appShortcuts.goHome(),
+    goExplorer: () => appShortcuts.goExplorer(),
     toggleHelp: () => help.toggle(),
     helpOpen: () => help.isOpen(),
     mediaModal,

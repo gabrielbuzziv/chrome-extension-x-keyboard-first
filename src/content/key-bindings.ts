@@ -52,6 +52,8 @@ export interface KeyBindingsDeps {
   toggleHelp: () => void;
   helpOpen: () => boolean;
   switchTab: (index: number) => void;
+  goHome: () => void;
+  goExplorer: () => void;
   reload?: () => void;
   mediaModal: { isOpen: () => boolean; handleKey: (e: KeyboardEvent) => void };
   linkMode: {
@@ -65,6 +67,7 @@ type ResolvedAction =
   | { kind: 'nav'; cmd: Command }
   | { kind: 'help' }
   | { kind: 'tab'; index: number }
+  | { kind: 'route'; target: 'home' | 'explorer' }
   | { kind: 'click'; target: 'showMore' | 'translate' | 'newPostsPill' }
   | { kind: 'reload' }
   | { kind: 'enterLinkMode' };
@@ -202,6 +205,12 @@ export function attachKeyBindings(deps: KeyBindingsDeps): () => void {
         return { kind: 'tab', index: 0 };
       case '2':
         return { kind: 'tab', index: 1 };
+      case 'h':
+      case 'H':
+        return { kind: 'route', target: 'home' };
+      case 'e':
+      case 'E':
+        return { kind: 'route', target: 'explorer' };
       case 't':
       case 'T': {
         const article = deps.nav.activeArticle();
@@ -251,6 +260,10 @@ export function attachKeyBindings(deps: KeyBindingsDeps): () => void {
       case 'help': deps.toggleHelp(); break;
       case 'nav': deps.nav.dispatch(action.cmd); break;
       case 'tab': deps.switchTab(action.index); break;
+      case 'route':
+        if (action.target === 'home') deps.goHome();
+        else deps.goExplorer();
+        break;
       case 'reload': reload(); break;
       case 'enterLinkMode': deps.linkMode.enter(); break;
       case 'click': {

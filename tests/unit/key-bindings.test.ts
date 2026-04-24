@@ -11,6 +11,8 @@ function makeDeps() {
   const dispatch = vi.fn();
   const toggleHelp = vi.fn();
   const switchTab = vi.fn();
+  const goHome = vi.fn();
+  const goExplorer = vi.fn();
   const reload = vi.fn();
   const modalOpen = vi.fn(() => false);
   const modalHandleKey = vi.fn();
@@ -21,6 +23,7 @@ function makeDeps() {
   let active: HTMLElement | null = null;
   return {
     dispatch, toggleHelp, switchTab, reload,
+    goHome, goExplorer,
     modalOpen, modalHandleKey, linkActive, linkEnter, linkHandleKey,
     setHelpOpen: (v: boolean) => { open = v; },
     setActive: (el: HTMLElement | null) => { active = el; },
@@ -28,7 +31,7 @@ function makeDeps() {
     setLinkActive: (v: boolean) => { linkActive.mockReturnValue(v); },
     bindings: {
       nav: { dispatch, activeArticle: () => active },
-      toggleHelp, switchTab, reload,
+      toggleHelp, switchTab, goHome, goExplorer, reload,
       helpOpen: () => open,
       mediaModal: { isOpen: modalOpen, handleKey: modalHandleKey },
       linkMode: { isActive: linkActive, enter: linkEnter, handleKey: linkHandleKey },
@@ -356,6 +359,41 @@ describe('attachKeyBindings', () => {
     fireKey({ key: '2' });
     expect(switchTab).toHaveBeenNthCalledWith(1, 0);
     expect(switchTab).toHaveBeenNthCalledWith(2, 1);
+  });
+
+  it('h routes to Home; e routes to Explorer', () => {
+    const d = makeDeps();
+    detach = attachKeyBindings(d.bindings);
+    const homeEvent = fireKey({ key: 'h' });
+    const exploreEvent = fireKey({ key: 'e' });
+    expect(d.goHome).toHaveBeenCalledTimes(1);
+    expect(d.goExplorer).toHaveBeenCalledTimes(1);
+    expect(homeEvent.defaultPrevented).toBe(true);
+    expect(exploreEvent.defaultPrevented).toBe(true);
+    expect(d.dispatch).not.toHaveBeenCalled();
+    expect(d.switchTab).not.toHaveBeenCalled();
+  });
+
+  it('h/e do nothing when help is open', () => {
+    const d = makeDeps();
+    d.setHelpOpen(true);
+    detach = attachKeyBindings(d.bindings);
+    fireKey({ key: 'h' });
+    fireKey({ key: 'e' });
+    expect(d.goHome).not.toHaveBeenCalled();
+    expect(d.goExplorer).not.toHaveBeenCalled();
+  });
+
+  it('h/e do nothing when focus is editable', () => {
+    const d = makeDeps();
+    detach = attachKeyBindings(d.bindings);
+    const input = document.createElement('input');
+    document.body.appendChild(input);
+    input.focus();
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'h', bubbles: true, cancelable: true }));
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'e', bubbles: true, cancelable: true }));
+    expect(d.goHome).not.toHaveBeenCalled();
+    expect(d.goExplorer).not.toHaveBeenCalled();
   });
 
   it('1/2 are swallowed (preventDefault) and do not reach nav dispatch', () => {

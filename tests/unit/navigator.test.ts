@@ -160,15 +160,39 @@ describe('createNavigator', () => {
 
   it('back calls goBack', () => {
     const entries = buildEntries(['a']);
+    const router = makeRouter('timeline');
     const goBack = vi.fn();
+    const navigateHome = vi.fn();
     const nav = createNavigator({
       registry: makeRegistry(entries),
-      router: makeRouter(),
+      router,
       openLink: vi.fn(),
       goBack,
+      navigateHome,
     });
+    nav.dispatch('next');
+    nav.dispatch('enter');
+    router._setMode('thread');
     nav.dispatch('back');
     expect(goBack).toHaveBeenCalled();
+    expect(navigateHome).not.toHaveBeenCalled();
+    nav.stop();
+  });
+
+  it('back falls back to home timeline when there is no local history', () => {
+    const entries = buildEntries(['a']);
+    const goBack = vi.fn();
+    const navigateHome = vi.fn();
+    const nav = createNavigator({
+      registry: makeRegistry(entries),
+      router: makeRouter('thread'),
+      openLink: vi.fn(),
+      goBack,
+      navigateHome,
+    });
+    nav.dispatch('back');
+    expect(goBack).not.toHaveBeenCalled();
+    expect(navigateHome).toHaveBeenCalled();
     nav.stop();
   });
 

@@ -148,6 +148,16 @@ export function createNavigator(deps: NavigatorDeps): Navigator {
       return cur ? cur.article : null;
     },
     dispatch(cmd) {
+      if (cmd === 'back') {
+        if (router.mode() !== 'thread') return;
+        if (lastTimelineUrl) {
+          goBack();
+          return;
+        }
+        navigateHome();
+        return;
+      }
+
       const entries = registry.current();
       if (entries.length === 0) return;
       const currentIndex = activeId
@@ -201,14 +211,6 @@ export function createNavigator(deps: NavigatorDeps): Navigator {
           openLink(link);
           break;
         }
-        case 'back':
-          if (router.mode() !== 'thread') break;
-          if (lastTimelineUrl) {
-            goBack();
-            break;
-          }
-          navigateHome();
-          break;
         case 'pageDown':
         case 'pageUp': {
           const dir = cmd === 'pageDown' ? 1 : -1;

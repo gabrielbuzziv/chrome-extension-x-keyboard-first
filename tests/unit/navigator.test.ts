@@ -179,6 +179,32 @@ describe('createNavigator', () => {
     nav.stop();
   });
 
+  it('back calls goBack on thread even when the registry is empty', () => {
+    const entries = buildEntries(['a']);
+    const registry = makeRegistry(entries);
+    const router = makeRouter('timeline');
+    const goBack = vi.fn();
+    const navigateHome = vi.fn();
+    const nav = createNavigator({
+      registry,
+      router,
+      openLink: vi.fn(),
+      goBack,
+      navigateHome,
+    });
+
+    nav.dispatch('next');
+    nav.dispatch('enter');
+    router._setMode('thread');
+    entries.splice(0, entries.length);
+
+    nav.dispatch('back');
+
+    expect(goBack).toHaveBeenCalledTimes(1);
+    expect(navigateHome).not.toHaveBeenCalled();
+    nav.stop();
+  });
+
   it('back falls back to home timeline when there is no local history', () => {
     const entries = buildEntries(['a']);
     const goBack = vi.fn();

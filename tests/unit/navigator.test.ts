@@ -213,6 +213,28 @@ describe('createNavigator', () => {
     nav.stop();
   });
 
+  it('back injects a page-world history.back script when no goBack dep is provided', () => {
+    const entries = buildEntries(['a']);
+    const appendChild = vi.spyOn(document.documentElement, 'appendChild');
+    const remove = vi.spyOn(HTMLScriptElement.prototype, 'remove');
+    const nav = createNavigator({
+      registry: makeRegistry(entries),
+      router: makeRouter('thread'),
+      openLink: vi.fn(),
+    });
+
+    nav.dispatch('back');
+
+    const script = appendChild.mock.calls[0]?.[0];
+    expect(script).toBeInstanceOf(HTMLScriptElement);
+    expect((script as HTMLScriptElement).textContent).toBe('history.back();');
+    expect(remove).toHaveBeenCalledTimes(1);
+
+    remove.mockRestore();
+    appendChild.mockRestore();
+    nav.stop();
+  });
+
   it('back does nothing on timeline', () => {
     const entries = buildEntries(['a']);
     const goBack = vi.fn();

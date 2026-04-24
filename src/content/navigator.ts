@@ -28,10 +28,18 @@ export interface NavigatorDeps {
   goBack?: () => void;
 }
 
+function goBackInPageWorld(): void {
+  const script = document.createElement('script');
+  // Execute back navigation in the page world so it matches the browser button.
+  script.textContent = 'history.back();';
+  document.documentElement.appendChild(script);
+  script.remove();
+}
+
 export function createNavigator(deps: NavigatorDeps): Navigator {
   const { registry, router } = deps;
   const openLink = deps.openLink ?? ((link: HTMLAnchorElement) => link.click());
-  const goBack = deps.goBack ?? (() => history.back());
+  const goBack = deps.goBack ?? goBackInPageWorld;
 
   let activeId: string | null = null;
   let lastTimelineActiveId: string | null = null;

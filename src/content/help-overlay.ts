@@ -1,18 +1,4 @@
-const BINDINGS: ReadonlyArray<[string, string]> = [
-  ['↓ / j', 'Next tweet'],
-  ['↑ / k', 'Previous tweet'],
-  ['→', 'Open tweet thread'],
-  ['← / Esc', 'Back'],
-  ['Home / gg', 'First tweet'],
-  ['End / G', 'Last tweet'],
-  ['Space / ⇧Space', 'Page down / up'],
-  ['l', 'Like (X native)'],
-  ['r', 'Reply (X native)'],
-  ['t', 'Retweet (X native)'],
-  ['b', 'Bookmark (X native)'],
-  ['n', 'Compose (X native)'],
-  ['?', 'Toggle help'],
-];
+import { BINDINGS } from '../shared/bindings';
 
 export interface HelpOverlay {
   toggle(): void;

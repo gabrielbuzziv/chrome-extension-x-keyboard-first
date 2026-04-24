@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Registry, TweetEntry } from '../../src/content/tweet-registry';
 import type { RouteWatcher, Mode } from '../../src/content/route-watcher';
 import { createNavigator } from '../../src/content/navigator';
@@ -67,9 +67,14 @@ function mockRect(article: HTMLElement, top: number, height: number): void {
 }
 
 describe('createNavigator', () => {
-  beforeEach(() => { document.body.innerHTML = ''; });
+  beforeEach(() => {
+    document.body.innerHTML = '';
+    document.elementFromPoint = vi.fn(() => null);
+    window.scrollBy = vi.fn() as unknown as typeof window.scrollBy;
+    window.scrollTo = vi.fn() as unknown as typeof window.scrollTo;
+  });
 
-  it('first dispatch activates nearest-to-viewport tweet', () => {
+  it('first next dispatch activates the first tweet', () => {
     const entries = buildEntries(['a', 'b', 'c']);
     const nav = createNavigator({
       registry: makeRegistry(entries),
@@ -78,9 +83,29 @@ describe('createNavigator', () => {
       goBack: vi.fn(),
     });
     nav.dispatch('next');
-    // nearest was 'a', then next → 'b'
+    expect(entries[0].article.getAttribute('data-xkbd-active')).toBe('true');
+    expect(entries[1].article.getAttribute('data-xkbd-active')).toBeNull();
+    nav.stop();
+  });
+
+  it('first next dispatch skips entries above the sticky tabs', () => {
+    const entries = buildEntries(['a', 'b', 'c']);
+    mockRect(entries[0].article, -300, 100);
+    mockRect(entries[1].article, 80, 100);
+    mockRect(entries[2].article, 260, 100);
+
+    const scrollBy = vi.fn();
+    window.scrollBy = scrollBy as unknown as typeof window.scrollBy;
+
+    const nav = createNavigator({
+      registry: makeRegistry(entries),
+      router: makeRouter(),
+      openLink: vi.fn(),
+      goBack: vi.fn(),
+    });
+    nav.dispatch('next');
     expect(entries[1].article.getAttribute('data-xkbd-active')).toBe('true');
-    expect(entries[0].article.getAttribute('data-xkbd-active')).toBeNull();
+    expect(scrollBy).toHaveBeenCalledWith({ top: 72, behavior: 'auto' });
     nav.stop();
   });
 
@@ -92,10 +117,10 @@ describe('createNavigator', () => {
       openLink: vi.fn(),
       goBack: vi.fn(),
     });
+    nav.dispatch('next'); // activates a
     nav.dispatch('next'); // a -> b
-    nav.dispatch('next'); // b -> c
-    nav.dispatch('prev'); // c -> b
-    expect(entries[1].article.getAttribute('data-xkbd-active')).toBe('true');
+    nav.dispatch('prev'); // b -> a
+    expect(entries[0].article.getAttribute('data-xkbd-active')).toBe('true');
     nav.stop();
   });
 
@@ -154,7 +179,7 @@ describe('createNavigator', () => {
     const nav = createNavigator({
       registry, router, openLink: vi.fn(), goBack: vi.fn(),
     });
-    nav.dispatch('next'); nav.dispatch('next'); // active is now 'c'
+    nav.dispatch('next'); nav.dispatch('next'); nav.dispatch('next'); // active is now 'c'
     nav.dispatch('enter'); // saves lastTimelineActiveId = 'c'
     router._setMode('thread');
     expect(entries[2].article.getAttribute('data-xkbd-active')).toBeNull();
@@ -185,7 +210,7 @@ describe('createNavigator', () => {
     const nav = createNavigator({
       registry, router, openLink: vi.fn(), goBack: vi.fn(),
     });
-    nav.dispatch('next'); // active 'b'
+    nav.dispatch('next'); nav.dispatch('next'); // active 'b'
     nav.dispatch('enter'); // saves 'b'
     router._setMode('thread');
 
@@ -214,8 +239,8 @@ describe('createNavigator', () => {
       openLink: vi.fn(),
       goBack: vi.fn(),
     });
-    nav.dispatch('next'); // activates 'b'
-    expect(nav.activeArticle()).toBe(entries[1].article);
+    nav.dispatch('next'); // activates 'a'
+    expect(nav.activeArticle()).toBe(entries[0].article);
     nav.stop();
   });
 
@@ -237,7 +262,7 @@ describe('createNavigator', () => {
     const nav = createNavigator({
       registry, router, openLink: vi.fn(), goBack: vi.fn(),
     });
-    nav.dispatch('next'); // 'b'
+    nav.dispatch('next'); nav.dispatch('next'); // 'b'
     nav.dispatch('enter'); // saves 'b'
     router._setMode('thread');
     entries.splice(1, 1); // remove 'b'
@@ -252,9 +277,8 @@ describe('createNavigator', () => {
     expect(newB.getAttribute('data-xkbd-active')).toBeNull();
   });
 
-  it('dispatching next unconditionally scrolls active article to headerBottom + SCROLL_PAD', () => {
+  it('next scrolls the active article to the top padding on first activation', () => {
     const entries = buildEntries(['a', 'b', 'c']);
-    // Large gaps — no thread grouping
     mockRect(entries[0].article, 500, 100);
     mockRect(entries[1].article, 700, 100);
     mockRect(entries[2].article, 900, 100);
@@ -268,18 +292,34 @@ describe('createNavigator', () => {
       openLink: vi.fn(),
       goBack: vi.fn(),
     });
-    nav.dispatch('next'); // a → b
-    // SCROLL_PAD = 8; headerBottom = 0 in jsdom; expected scroll = 700 - 8 = 692
-    expect(scrollBy).toHaveBeenCalledWith({ top: 692, behavior: 'auto' });
+    nav.dispatch('next');
+    expect(entries[0].article.getAttribute('data-xkbd-active')).toBe('true');
+    expect(scrollBy).toHaveBeenCalledWith({ top: 492, behavior: 'auto' });
     nav.stop();
   });
 
-  it('within a thread group, navigating keeps scroll anchored at the group top', () => {
-    const entries = buildEntries(['a', 'b', 'c']);
-    // a, b, c are flush (gap = 2px ≤ THREAD_GAP_PX=4)
-    mockRect(entries[0].article, 500, 100); // bottom = 600
-    mockRect(entries[1].article, 602, 100); // gap 2
-    mockRect(entries[2].article, 704, 100); // gap 2
+  it('next respects the sticky navigation tabs offset when scrolling', () => {
+    const entries = buildEntries(['a', 'b']);
+    mockRect(entries[0].article, 420, 100);
+    mockRect(entries[1].article, 700, 100);
+
+    const stickyTabs = document.createElement('div');
+    stickyTabs.style.position = 'sticky';
+    stickyTabs.style.top = '0px';
+    stickyTabs.getBoundingClientRect = () =>
+      ({
+        top: 0,
+        bottom: 52,
+        left: 0,
+        right: 800,
+        width: 800,
+        height: 52,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      }) as DOMRect;
+    document.body.appendChild(stickyTabs);
+    document.elementFromPoint = vi.fn(() => stickyTabs);
 
     const scrollBy = vi.fn();
     window.scrollBy = scrollBy as unknown as typeof window.scrollBy;
@@ -290,60 +330,8 @@ describe('createNavigator', () => {
       openLink: vi.fn(),
       goBack: vi.fn(),
     });
-    nav.dispatch('next'); // a → b; group top still 'a' (500)
-    nav.dispatch('next'); // b → c; group top still 'a' (500)
-    // Both moveTo calls scroll to the same target: 500 - 8 = 492
-    expect(scrollBy).toHaveBeenNthCalledWith(1, { top: 492, behavior: 'auto' });
-    expect(scrollBy).toHaveBeenNthCalledWith(2, { top: 492, behavior: 'auto' });
-    nav.stop();
-  });
-
-  it('group walk is capped so a runaway of flush posts cannot pin far away', () => {
-    // 8 posts all with tiny gaps. Without the cap, findGroupTop would walk
-    // back 7 steps to entries[0]. Cap is 3, so the pin target is at most 3 back.
-    const entries = buildEntries(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']);
-    for (let i = 0; i < 8; i++) {
-      mockRect(entries[i].article, 500 + i * 102, 100);
-    }
-    const scrollBy = vi.fn();
-    window.scrollBy = scrollBy as unknown as typeof window.scrollBy;
-
-    const nav = createNavigator({
-      registry: makeRegistry(entries),
-      router: makeRouter(),
-      openLink: vi.fn(),
-      goBack: vi.fn(),
-    });
-    // Move to entries[7] step by step; final pin should target entries[4]
-    // (7 - 3 walk cap = 4), not entries[0].
-    for (let i = 0; i < 7; i++) nav.dispatch('next');
-    const lastCall = scrollBy.mock.calls[scrollBy.mock.calls.length - 1][0];
-    const expectedTop = 500 + 4 * 102 - 8; // entries[4].top - SCROLL_PAD
-    expect(lastCall.top).toBe(expectedTop);
-    nav.stop();
-  });
-
-  it('crossing out of a thread group re-pins to the new group top', () => {
-    const entries = buildEntries(['a', 'b', 'c', 'd']);
-    // a, b, c form one group; d is its own (large gap before)
-    mockRect(entries[0].article, 500, 100);  // bottom 600
-    mockRect(entries[1].article, 602, 100);  // gap 2 → grouped
-    mockRect(entries[2].article, 704, 100);  // gap 2 → grouped, bottom 804
-    mockRect(entries[3].article, 920, 100);  // gap 116 → separate
-
-    const scrollBy = vi.fn();
-    window.scrollBy = scrollBy as unknown as typeof window.scrollBy;
-
-    const nav = createNavigator({
-      registry: makeRegistry(entries),
-      router: makeRouter(),
-      openLink: vi.fn(),
-      goBack: vi.fn(),
-    });
-    nav.dispatch('next'); // a → b (pin @ 500)
-    nav.dispatch('next'); // b → c (pin @ 500)
-    nav.dispatch('next'); // c → d (pin @ 920)
-    expect(scrollBy).toHaveBeenNthCalledWith(3, { top: 912, behavior: 'auto' });
+    nav.dispatch('next');
+    expect(scrollBy).toHaveBeenCalledWith({ top: 360, behavior: 'auto' });
     nav.stop();
   });
 

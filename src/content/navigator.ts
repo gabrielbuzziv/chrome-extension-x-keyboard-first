@@ -13,21 +13,7 @@ export type Command =
   | 'pageUp';
 
 const ACTIVE_ATTR = 'data-xkbd-active';
-const THREAD_GAP_PX = 4;
-const THREAD_MAX_WALK = 3;
-
-function findGroupTop(entries: TweetEntry[], idx: number): TweetEntry {
-  let i = idx;
-  let walked = 0;
-  while (i > 0 && walked < THREAD_MAX_WALK) {
-    const prev = entries[i - 1].article.getBoundingClientRect();
-    const cur = entries[i].article.getBoundingClientRect();
-    if (cur.top - prev.bottom > THREAD_GAP_PX) break;
-    i--;
-    walked++;
-  }
-  return entries[i];
-}
+const SCROLL_PAD_PX = 8;
 
 export interface Navigator {
   dispatch(cmd: Command): void;
@@ -69,16 +55,17 @@ export function createNavigator(deps: NavigatorDeps): Navigator {
     if (entry) entry.article.setAttribute(ACTIVE_ATTR, 'true');
   };
 
-  const SCROLL_PAD = 8;
-
   const topObstructionHeight = (): number => {
     if (typeof document.elementFromPoint !== 'function') return 0;
     const x = Math.max(1, Math.floor(window.innerWidth / 2));
     let node: Element | null = document.elementFromPoint(x, 1);
     while (node && node !== document.body) {
-      const cs = getComputedStyle(node as HTMLElement);
-      const top = parseFloat(cs.top || '0');
-      if ((cs.position === 'sticky' || cs.position === 'fixed') && top <= 0) {
+      const styles = getComputedStyle(node as HTMLElement);
+      const top = Number.parseFloat(styles.top || '0');
+      if (
+        (styles.position === 'sticky' || styles.position === 'fixed') &&
+        top <= 0
+      ) {
         return (node as HTMLElement).getBoundingClientRect().bottom;
       }
       node = node.parentElement;
@@ -86,18 +73,23 @@ export function createNavigator(deps: NavigatorDeps): Navigator {
     return 0;
   };
 
-  const focusAndScroll = () => {
+  const focusAndScroll = (): void => {
     if (!activeId) return;
     const entry = registry.findById(activeId);
     if (!entry) return;
     entry.article.focus({ preventScroll: true });
-    const list = registry.current();
-    const idx = list.findIndex((e) => e.id === activeId);
-    if (idx < 0) return;
-    const groupTop = findGroupTop(list, idx);
-    const rect = groupTop.article.getBoundingClientRect();
-    const targetTop = topObstructionHeight() + SCROLL_PAD;
+    const rect = entry.article.getBoundingClientRect();
+    const targetTop = topObstructionHeight() + SCROLL_PAD_PX;
     window.scrollBy({ top: rect.top - targetTop, behavior: 'auto' });
+  };
+
+  const firstVisibleIndex = (entries: TweetEntry[]): number => {
+    const targetTop = topObstructionHeight() + SCROLL_PAD_PX;
+    const index = entries.findIndex((entry) => {
+      const rect = entry.article.getBoundingClientRect();
+      return rect.bottom > targetTop;
+    });
+    return index === -1 ? 0 : index;
   };
 
   const ensureActive = (): TweetEntry | undefined => {
@@ -153,16 +145,26 @@ export function createNavigator(deps: NavigatorDeps): Navigator {
     dispatch(cmd) {
       const entries = registry.current();
       if (entries.length === 0) return;
-      const cur = ensureActive();
-      if (!cur) return;
-      const idx = entries.findIndex((e) => e.id === cur.id);
+      const currentIndex = activeId
+        ? entries.findIndex((e) => e.id === activeId)
+        : -1;
 
       switch (cmd) {
         case 'next':
-          if (idx < entries.length - 1) moveTo(entries[idx + 1].id);
+          if (currentIndex === -1) {
+            moveTo(entries[firstVisibleIndex(entries)].id);
+            break;
+          }
+          if (currentIndex < entries.length - 1) {
+            moveTo(entries[currentIndex + 1].id);
+          }
           break;
         case 'prev':
-          if (idx > 0) moveTo(entries[idx - 1].id);
+          if (currentIndex === -1) {
+            moveTo(entries[firstVisibleIndex(entries)].id);
+            break;
+          }
+          if (currentIndex > 0) moveTo(entries[currentIndex - 1].id);
           break;
         case 'first':
         case 'last': {

@@ -8,6 +8,7 @@ import { createHintButton } from './hint-button';
 import { createMediaModal } from './media-modal';
 import { createLinkMode } from './link-mode';
 import { createMediaExpandButton } from './media-expand-button';
+import { createShowMoreChip } from './show-more-chip';
 import { createAppShortcuts } from './app-shortcuts';
 import { isSupportedXHost } from '../shared/host';
 
@@ -21,6 +22,7 @@ function main() {
   const mediaModal = createMediaModal();
   const linkMode = createLinkMode({ nav, registry, router, mediaModal });
   const expandBtn = createMediaExpandButton({ nav, registry, mediaModal });
+  const showMoreChip = createShowMoreChip({ nav, registry });
   const appShortcuts = createAppShortcuts();
 
   const detach = attachKeyBindings({
@@ -40,6 +42,7 @@ function main() {
       detach();
       linkMode.stop();
       expandBtn.stop();
+      showMoreChip.stop();
       mediaModal.stop();
       nav.stop();
       help.stop();

@@ -202,7 +202,8 @@ export function createNavigator(deps: NavigatorDeps): Navigator {
           break;
         }
         case 'back':
-          if (router.mode() === 'thread' && lastTimelineUrl) {
+          if (router.mode() !== 'thread') break;
+          if (lastTimelineUrl) {
             goBack();
             break;
           }

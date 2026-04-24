@@ -196,6 +196,44 @@ describe('createNavigator', () => {
     nav.stop();
   });
 
+  it('back does nothing on timeline', () => {
+    const entries = buildEntries(['a']);
+    const goBack = vi.fn();
+    const navigateHome = vi.fn();
+    const nav = createNavigator({
+      registry: makeRegistry(entries),
+      router: makeRouter('timeline'),
+      openLink: vi.fn(),
+      goBack,
+      navigateHome,
+    });
+
+    nav.dispatch('back');
+
+    expect(goBack).not.toHaveBeenCalled();
+    expect(navigateHome).not.toHaveBeenCalled();
+    nav.stop();
+  });
+
+  it('back on a direct-entry thread navigates to timeline without using history', () => {
+    const entries = buildEntries(['a']);
+    const goBack = vi.fn();
+    const navigateHome = vi.fn();
+    const nav = createNavigator({
+      registry: makeRegistry(entries),
+      router: makeRouter('thread'),
+      openLink: vi.fn(),
+      goBack,
+      navigateHome,
+    });
+
+    nav.dispatch('back');
+
+    expect(goBack).not.toHaveBeenCalled();
+    expect(navigateHome).toHaveBeenCalledTimes(1);
+    nav.stop();
+  });
+
   it('restores activeId when returning to timeline mode', () => {
     const entries = buildEntries(['a', 'b', 'c']);
     const registry = makeRegistry(entries);

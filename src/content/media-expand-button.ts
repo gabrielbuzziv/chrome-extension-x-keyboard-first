@@ -92,15 +92,73 @@ export function createMediaExpandButton(
           :host { all: initial; position: absolute; z-index: 2147483645; }
           button {
             all: unset; cursor: pointer;
-            width: 28px; height: 28px; border-radius: 999px;
+            height: 28px; min-width: 28px; border-radius: 999px;
             background: rgba(15,17,21,0.92); color: ${THEME.text};
-            display: grid; place-items: center;
+            display: inline-flex; align-items: center; justify-content: center;
             box-shadow: 0 0 0 1px ${THEME.accentBorder};
             font: 700 14px/1 ui-monospace, Menlo, monospace;
+            transition:
+              background 120ms ease,
+              box-shadow 120ms ease,
+              padding 120ms ease,
+              transform 120ms ease;
           }
-          button:hover { background: ${THEME.surfaceStrong}; }
+          button:hover,
+          button:focus-visible {
+            background: ${THEME.surfaceStrong};
+            box-shadow:
+              0 0 0 1px ${THEME.accentBorder},
+              0 0 0 4px ${THEME.accentRing};
+            padding: 0 8px 0 0;
+            transform: translateX(-2px);
+          }
+          button:focus-visible { outline: none; }
+          .icon {
+            width: 28px; height: 28px; border-radius: 999px;
+            display: inline-grid; place-items: center;
+            flex: 0 0 28px;
+          }
+          .shortcut {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            max-width: 0;
+            opacity: 0;
+            overflow: hidden;
+            white-space: nowrap;
+            transition: max-width 120ms ease, opacity 120ms ease;
+          }
+          button:hover .shortcut,
+          button:focus-visible .shortcut {
+            max-width: 120px;
+            opacity: 1;
+          }
+          .key {
+            display: inline-flex;
+            align-items: center;
+            min-height: 18px;
+            border-radius: 5px;
+            border: 1px solid ${THEME.keyBorder};
+            background: ${THEME.keySurface};
+            padding: 0 5px;
+            font: 700 10px/1 ui-monospace, "JetBrains Mono", "SF Mono", Menlo, monospace;
+          }
+          .separator {
+            color: ${THEME.textMuted};
+            font: 700 10px/1 ui-monospace, "JetBrains Mono", "SF Mono", Menlo, monospace;
+          }
         </style>
-        <button type="button" aria-label="Expand video">⤢</button>
+        <button
+          type="button"
+          aria-label="Expand video. Shortcut: press O, then choose 1 through 9."
+        >
+          <span class="icon" aria-hidden="true">⤢</span>
+          <span class="shortcut" aria-hidden="true">
+            <span class="key">O</span>
+            <span class="separator">then</span>
+            <span class="key">1..9</span>
+          </span>
+        </button>
       `;
       const rect = video.getBoundingClientRect();
       host.style.position = 'absolute';

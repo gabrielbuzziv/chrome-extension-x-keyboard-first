@@ -8,6 +8,7 @@ import { createHintButton } from './hint-button';
 import { createMediaModal } from './media-modal';
 import { createLinkMode } from './link-mode';
 import { createMediaExpandButton } from './media-expand-button';
+import { isSupportedXHost } from '../shared/host';
 
 function main() {
   const registry = createRegistry();
@@ -46,8 +47,13 @@ function main() {
   );
 }
 
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => main(), { once: true });
-} else {
+function boot(): void {
+  if (!isSupportedXHost(location.href)) return;
   main();
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => boot(), { once: true });
+} else {
+  boot();
 }

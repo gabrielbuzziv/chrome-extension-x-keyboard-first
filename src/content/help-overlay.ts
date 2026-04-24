@@ -1,4 +1,5 @@
 import { BINDINGS } from '../shared/bindings';
+import { THEME } from '../shared/theme';
 
 export interface HelpOverlay {
   toggle(): void;
@@ -38,7 +39,8 @@ export function createHelpOverlay(): HelpOverlay {
           font-family: -apple-system, system-ui, "Segoe UI", sans-serif;
         }
         .panel {
-          background: #15202b; color: #e7e9ea;
+          background: ${THEME.surfaceStrong}; color: ${THEME.text};
+          border: 1px solid ${THEME.border};
           border-radius: 16px; padding: 22px 26px;
           min-width: 360px; max-width: 520px;
           box-shadow: 0 20px 60px rgba(0,0,0,0.5);
@@ -48,11 +50,11 @@ export function createHelpOverlay(): HelpOverlay {
         td { padding: 5px 0; font-size: 13px; vertical-align: top; }
         td.key {
           white-space: nowrap; padding-right: 18px;
-          color: #1d9bf0;
+          color: ${THEME.accent};
           font-family: ui-monospace, SFMono-Regular, monospace;
         }
-        td.desc { color: #e7e9ea; }
-        .hint { margin-top: 14px; color: #8899a6; font-size: 12px; }
+        td.desc { color: ${THEME.text}; }
+        .hint { margin-top: 14px; color: ${THEME.textMuted}; font-size: 12px; }
       </style>
       <div class="backdrop">
         <div class="panel" role="dialog" aria-label="Keyboard shortcuts">

@@ -1,3 +1,5 @@
+import { THEME } from '../shared/theme';
+
 export type MediaItem =
   | { kind: 'image'; src: string; alt?: string }
   | { kind: 'video'; el: HTMLVideoElement };
@@ -58,7 +60,7 @@ export function createMediaModal(): MediaModal {
                   transform: translateX(-50%); display: flex; gap: 6px; }
         .thumb { width: 34px; height: 24px; border: 0; border-radius: 4px;
                  background: #333; cursor: pointer; padding: 0; }
-        .thumb.is-current { box-shadow: 0 0 0 2px #1d9bf0; }
+        .thumb.is-current { box-shadow: 0 0 0 2px ${THEME.accent}; }
       </style>
       <div class="backdrop">
         <div class="stage"></div>

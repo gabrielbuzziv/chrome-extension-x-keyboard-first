@@ -1,4 +1,5 @@
 import { BINDINGS } from '../shared/bindings';
+import { THEME } from '../shared/theme';
 
 export interface HintButton {
   stop(): void;
@@ -25,10 +26,9 @@ const renderKeys = (combo: string): string =>
 
 const renderRows = (): string =>
   BINDINGS.map(
-    ([keys, desc], i) => `
-      <li style="--i:${i}">
+    ([keys, desc]) => `
+      <li>
         <span class="combo">${renderKeys(keys)}</span>
-        <span class="rail" aria-hidden="true"></span>
         <span class="desc">${escapeHtml(desc)}</span>
       </li>`,
   ).join('');
@@ -57,72 +57,32 @@ export function createHintButton(deps: HintButtonDeps): HintButton {
         width: 32px; height: 32px;
         border-radius: 999px;
         display: grid; place-items: center;
-        background:
-          radial-gradient(120% 120% at 30% 20%, rgba(29,155,240,0.18), transparent 60%),
-          linear-gradient(180deg, rgba(22,30,38,0.92), rgba(11,16,22,0.94));
-        border: 1px solid rgba(29,155,240,0.32);
-        color: #6cb8f5;
+        background: ${THEME.surface};
+        border: 1px solid ${THEME.accentBorder};
+        color: ${THEME.accent};
         font-size: 13px;
         font-weight: 700;
         letter-spacing: 0.02em;
-        text-shadow: 0 1px 0 rgba(0,0,0,0.5);
-        box-shadow:
-          inset 0 1px 0 rgba(255,255,255,0.06),
-          inset 0 -1px 0 rgba(0,0,0,0.4),
-          0 8px 22px -10px rgba(0,0,0,0.7);
-        transition:
-          transform 200ms cubic-bezier(0.2, 0.7, 0.2, 1),
-          border-color 200ms ease,
-          color 200ms ease,
-          box-shadow 240ms ease;
-        will-change: transform, box-shadow;
+        box-shadow: 0 10px 24px -18px rgba(0,0,0,0.95);
       }
-      .trigger:hover {
-        transform: translateY(-1px);
-        color: #9bd0fa;
-        border-color: rgba(29,155,240,0.7);
-        box-shadow:
-          inset 0 1px 0 rgba(255,255,255,0.10),
-          inset 0 -1px 0 rgba(0,0,0,0.5),
-          0 12px 28px -10px rgba(0,0,0,0.8),
-          0 0 0 5px rgba(29,155,240,0.10);
-      }
-      .trigger:active { transform: translateY(0); }
       .trigger:focus-visible {
-        outline: none;
-        box-shadow:
-          inset 0 1px 0 rgba(255,255,255,0.10),
-          0 0 0 3px rgba(29,155,240,0.45);
+        outline: 2px solid ${THEME.accent};
+        outline-offset: 2px;
       }
-      .glyph { display: inline-block; transform: translateY(-1px); }
+      .glyph { display: inline-block; }
 
       .card {
+        display: none;
         position: absolute;
         bottom: calc(100% + 14px);
         left: 0;
-        width: 320px;
+        width: 304px;
         padding: 14px 16px 12px;
-        border-radius: 14px;
-        background:
-          radial-gradient(140% 80% at 0% 0%, rgba(29,155,240,0.14), transparent 60%),
-          radial-gradient(120% 100% at 100% 100%, rgba(120,86,255,0.06), transparent 60%),
-          linear-gradient(180deg, rgba(22,30,38,0.96), rgba(10,14,20,0.96));
-        border: 1px solid rgba(255,255,255,0.07);
-        box-shadow:
-          inset 0 1px 0 rgba(255,255,255,0.05),
-          0 28px 64px -18px rgba(0,0,0,0.85),
-          0 8px 24px -10px rgba(0,0,0,0.6);
-        backdrop-filter: blur(14px) saturate(140%);
-        -webkit-backdrop-filter: blur(14px) saturate(140%);
-        opacity: 0;
-        transform: translateY(6px) scale(0.985);
-        transform-origin: bottom left;
-        pointer-events: none;
-        transition:
-          opacity 180ms ease,
-          transform 240ms cubic-bezier(0.2, 0.7, 0.2, 1);
+        border-radius: 12px;
+        background: ${THEME.surfaceStrong};
+        border: 1px solid ${THEME.border};
+        box-shadow: 0 24px 48px -28px rgba(0,0,0,0.95);
       }
-      /* Invisible bridge so cursor can travel from button to card without losing hover */
       .card::after {
         content: '';
         position: absolute;
@@ -132,11 +92,8 @@ export function createHintButton(deps: HintButtonDeps): HintButton {
         height: 16px;
       }
       .root:hover .card,
-      .root:focus-within .card,
-      .card:hover {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-        pointer-events: auto;
+      .root:focus-within .card {
+        display: block;
       }
 
       .header {
@@ -145,46 +102,34 @@ export function createHintButton(deps: HintButtonDeps): HintButton {
         justify-content: space-between;
         margin-bottom: 10px;
         padding-bottom: 9px;
-        border-bottom: 1px dashed rgba(255,255,255,0.08);
+        border-bottom: 1px solid ${THEME.border};
       }
       .title {
-        color: #e7e9ea;
+        color: ${THEME.text};
         font-size: 10.5px;
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.22em;
       }
-      .title::before {
-        content: '⌘';
-        margin-right: 8px;
-        color: #1d9bf0;
-        font-weight: 600;
-      }
       .hint {
-        color: #6e7884;
+        color: ${THEME.textMuted};
         font-size: 10px;
         letter-spacing: 0.04em;
         font-family: -apple-system, "SF Pro Text", system-ui, sans-serif;
       }
 
-      ul { list-style: none; margin: 0; padding: 0; }
+      ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        gap: 8px;
+      }
       li {
         display: grid;
-        grid-template-columns: auto 1fr auto;
+        grid-template-columns: auto 1fr;
         align-items: center;
-        gap: 10px;
-        padding: 4px 0;
-        opacity: 0;
-        transform: translateY(4px);
-      }
-      .root:hover li,
-      .root:focus-within li,
-      .card:hover li {
-        animation: pop 320ms cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
-        animation-delay: calc(var(--i) * 14ms + 80ms);
-      }
-      @keyframes pop {
-        to { opacity: 1; transform: translateY(0); }
+        gap: 12px;
       }
 
       .combo {
@@ -194,46 +139,27 @@ export function createHintButton(deps: HintButtonDeps): HintButton {
         flex-wrap: nowrap;
       }
       .sep {
-        color: #4a5460;
+        color: ${THEME.textMuted};
         font-size: 9.5px;
         padding: 0 1px;
       }
       kbd {
         font: 700 10.5px/1 ui-monospace, "JetBrains Mono", "SF Mono", Menlo, monospace;
-        color: #d6dde4;
-        background: linear-gradient(180deg, #1f2832 0%, #131a22 100%);
-        border: 1px solid rgba(255,255,255,0.09);
-        border-bottom-color: rgba(0,0,0,0.55);
+        color: ${THEME.text};
+        background: ${THEME.keySurface};
+        border: 1px solid ${THEME.keyBorder};
         border-radius: 5px;
         padding: 4px 6px;
         min-width: 14px;
         text-align: center;
-        box-shadow:
-          inset 0 1px 0 rgba(255,255,255,0.08),
-          0 1px 0 rgba(0,0,0,0.5),
-          0 2px 0 rgba(0,0,0,0.25);
-        text-shadow: 0 1px 0 rgba(0,0,0,0.4);
-      }
-      .rail {
-        height: 1px;
-        background: linear-gradient(90deg,
-          rgba(255,255,255,0.04),
-          rgba(255,255,255,0.10),
-          rgba(255,255,255,0.04));
-        opacity: 0.55;
       }
       .desc {
-        color: #b6c0cc;
+        color: ${THEME.textMuted};
         font-size: 12px;
         font-family: -apple-system, "SF Pro Text", system-ui, sans-serif;
         letter-spacing: 0.005em;
         text-align: right;
         white-space: nowrap;
-      }
-
-      @media (prefers-reduced-motion: reduce) {
-        .trigger, .card, li { transition: none; animation: none; }
-        li { opacity: 1; transform: none; }
       }
     </style>
     <div class="root">

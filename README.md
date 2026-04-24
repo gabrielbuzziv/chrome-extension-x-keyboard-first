@@ -1,10 +1,10 @@
 # x-keyboard-first
 
-A Chrome extension that makes X (twitter.com / x.com) keyboard-first.
+A Chrome extension that makes X (x.com) keyboard-first.
 
 ## Features
 
-- Highlights the currently active tweet with a blue ring.
+- Highlights the currently active tweet with an orange ring.
 - Arrow keys (+ `j`/`k`) navigate between tweets in any feed.
 - `→` opens the highlighted tweet's thread; `←` (or `Esc`) returns.
 - Works on home, profile, search, bookmarks, lists, and thread pages.

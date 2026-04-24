@@ -1,6 +1,7 @@
 import type { Registry } from './tweet-registry';
 import type { MediaModal, MediaItem } from './media-modal';
 import { SELECTORS, queryAll } from '../shared/selectors';
+import { THEME } from '../shared/theme';
 
 export interface MediaExpandButton {
   stop(): void;
@@ -92,12 +93,12 @@ export function createMediaExpandButton(
           button {
             all: unset; cursor: pointer;
             width: 28px; height: 28px; border-radius: 999px;
-            background: rgba(0,0,0,0.65); color: #fff;
+            background: rgba(15,17,21,0.92); color: ${THEME.text};
             display: grid; place-items: center;
-            box-shadow: 0 0 0 1px rgba(29,155,240,0.35);
+            box-shadow: 0 0 0 1px ${THEME.accentBorder};
             font: 700 14px/1 ui-monospace, Menlo, monospace;
           }
-          button:hover { background: rgba(0,0,0,0.85); }
+          button:hover { background: ${THEME.surfaceStrong}; }
         </style>
         <button type="button" aria-label="Expand video">⤢</button>
       `;

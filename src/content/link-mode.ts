@@ -1,4 +1,5 @@
 import { SELECTORS, queryAll } from '../shared/selectors';
+import { THEME } from '../shared/theme';
 import type { Registry } from './tweet-registry';
 import type { RouteWatcher } from './route-watcher';
 import type { MediaItem, MediaModal } from './media-modal';
@@ -108,10 +109,10 @@ export function createLinkMode(deps: LinkModeDeps): LinkMode {
         :host { all: initial; }
         .badge {
           position: absolute; pointer-events: none;
-          background: linear-gradient(180deg, #1f2832, #131a22);
-          color: #d6dde4; font: 700 12px/1 ui-monospace, Menlo, monospace;
+          background: ${THEME.surfaceStrong};
+          color: ${THEME.text}; font: 700 12px/1 ui-monospace, Menlo, monospace;
           padding: 2px 6px; border-radius: 4px;
-          box-shadow: 0 0 0 1px rgba(29,155,240,0.45),
+          box-shadow: 0 0 0 1px ${THEME.accentBorder},
                       0 4px 10px -4px rgba(0,0,0,0.7);
           z-index: 2147483646;
         }

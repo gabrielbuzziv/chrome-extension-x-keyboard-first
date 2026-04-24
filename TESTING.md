@@ -5,7 +5,7 @@ Run before every release.
 **Setup:** `npm run build`, load `dist/` unpacked, sign in to X.
 
 ## Home timeline
-- [ ] Press `↓`: a tweet gets a visible blue ring.
+- [ ] Press `↓`: a tweet gets a visible orange ring.
 - [ ] `↓` / `↑`: ring moves between adjacent tweets.
 - [ ] `j` / `k`: same as above.
 - [ ] `gg`: jumps to first loaded tweet.

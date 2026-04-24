@@ -63,6 +63,19 @@ describe('enumerateTargets', () => {
     const article = makeArticle(items);
     expect(enumerateTargets(article).length).toBe(9);
   });
+
+  it('collects quoted-thread permalink wrappers when X does not render a nested article', () => {
+    const article = makeArticle(`
+      <div data-testid="tweetText">outer text</div>
+      <a role="link" tabindex="0" href="/theo/status/123">
+        <time>6 h</time>
+        <span>quoted thread</span>
+      </a>
+    `);
+    const targets = enumerateTargets(article);
+    expect(targets.map((x) => x.kind)).toEqual(['quotedTweet']);
+    expect((targets[0].el as HTMLAnchorElement).href).toContain('/theo/status/123');
+  });
 });
 
 function makeDeps(active: HTMLElement | null) {
@@ -233,6 +246,29 @@ describe('createLinkMode', () => {
     await new Promise<void>((r) => requestAnimationFrame(() => r()));
     const after = host.shadowRoot!.querySelectorAll('.badge').length;
     expect(after).toBe(initial);
+    lm.stop();
+  });
+
+  it('handleKey "1" clicks a quoted-thread permalink wrapper in the current tab', () => {
+    const article = makeArticle(`
+      <div data-testid="tweetText">outer text</div>
+      <a role="link" tabindex="0" href="/theo/status/123">
+        <time>6 h</time>
+        <span>quoted thread</span>
+      </a>
+    `);
+    const deps = makeDeps(article);
+    const lm = createLinkMode(deps as any);
+    const link = article.querySelector('a[href*="/status/"]') as HTMLAnchorElement;
+    const click = vi.fn();
+    link.addEventListener('click', (event) => {
+      event.preventDefault();
+      click();
+    });
+    lm.enter();
+    lm.handleKey(new KeyboardEvent('keydown', { key: '1' }));
+    expect(click).toHaveBeenCalledTimes(1);
+    expect(lm.isActive()).toBe(false);
     lm.stop();
   });
 

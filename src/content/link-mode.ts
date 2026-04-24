@@ -1,4 +1,4 @@
-import { SELECTORS, queryAll } from '../shared/selectors';
+import { SELECTORS, queryAll, queryFirst } from '../shared/selectors';
 import { THEME } from '../shared/theme';
 import type { Registry } from './tweet-registry';
 import type { RouteWatcher } from './route-watcher';
@@ -40,11 +40,13 @@ export function enumerateTargets(article: HTMLElement): LinkTarget[] {
   const cards = queryAll(SELECTORS.CARD, article) as HTMLElement[];
   for (const c of cards) add('cardLink', c);
 
-  // Quoted tweet — nested article that is not the outer article.
-  const quoted = Array.from(
-    article.querySelectorAll<HTMLElement>('article[data-testid="tweet"]'),
-  ).filter((n) => n !== article);
-  for (const q of quoted) add('quotedTweet', q);
+  // Quoted tweet / embedded thread. X can render this either as a nested
+  // article or as a direct permalink wrapper.
+  const quoted = queryAll(SELECTORS.QUOTED_TWEET, article) as HTMLElement[];
+  for (const q of quoted) {
+    if (q === article) continue;
+    add('quotedTweet', q);
+  }
 
   // Images.
   const imgs = queryAll(SELECTORS.IMAGE, article) as HTMLElement[];
@@ -187,9 +189,9 @@ export function createLinkMode(deps: LinkModeDeps): LinkMode {
         return;
       }
       case 'quotedTweet': {
-        const link = t.el.querySelector<HTMLAnchorElement>(
-          'a[href*="/status/"][role="link"]',
-        );
+        const link =
+          (t.el instanceof HTMLAnchorElement ? t.el : null) ??
+          (queryFirst(SELECTORS.PERMALINK_IN_TWEET, t.el) as HTMLAnchorElement | null);
         if (link) link.click();
         return;
       }

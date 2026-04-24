@@ -99,7 +99,7 @@ function findByText(
   return null;
 }
 
-function findShowMore(article: HTMLElement): HTMLElement | null {
+export function findShowMore(article: HTMLElement): HTMLElement | null {
   // Restrict the search to the outer tweet's text area so a show-more inside
   // a quoted sub-tweet does not hijack the Space press.
   const outerText = queryFirst(SELECTORS.TWEET_TEXT, article) as HTMLElement | null;
